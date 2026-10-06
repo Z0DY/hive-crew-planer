@@ -13,7 +13,7 @@
     Host = "100.66.2.1"                  # wie Test – anpassen, falls anderer Server
     User = "root"
     Port = 22
-    Path = "PFAD-EINTRAGEN"              # z. B. /var/www/hive
-    Url  = "https://URL-EINTRAGEN"       # z. B. https://hive.z0dy.de
+    Path = "/var/www/hive"              # z. B. /var/www/hive
+    Url  = "https://hive.z0dy.de"       # z. B. https://hive.z0dy.de
   }
 }

@@ -47,7 +47,7 @@ if ($prod -and -not $Yes) {
 }
 
 $bundle = Join-Path $env:TEMP "hive-deploy.tgz"
-Git archive --format=tar.gz -o $bundle $rev
+Git -c tar.umask=0022 archive --format=tar.gz -o $bundle $rev   # Dateien 644, Ordner 755
 
 $dest = "$($cfg.User)@$($cfg.Host)"
 $remoteTmp = "/tmp/hive-deploy-$hash.tgz"
