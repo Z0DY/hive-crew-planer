@@ -39,7 +39,7 @@ button{font:inherit;color:inherit;cursor:pointer}
   background:repeating-conic-gradient(from 0deg at 50% 120%,rgba(35,35,42,.10) 0 1.2deg,transparent 1.2deg 4deg,rgba(215,20,26,.10) 4deg 4.6deg,transparent 4.6deg 9deg);
   pointer-events:none}
 .hero-inner{position:relative;max-width:1280px;margin:0 auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.logo{font-family:var(--display);font-size:clamp(40px,8vw,72px);line-height:.9;color:var(--red);margin:0;letter-spacing:.01em;user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+.logo{font-family:var(--display);font-size:clamp(40px,8vw,72px);line-height:.9;color:var(--red);margin:0;letter-spacing:.01em;user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none}
 .logo small{display:inline-block;font-family:var(--cond);font-weight:600;font-size:.32em;color:var(--red);border:2px solid var(--red);padding:0 .35em;vertical-align:.95em;margin-left:.2em;letter-spacing:.06em}
 .sub{margin:6px 0 0;font-family:var(--cond);font-weight:600;font-size:18px;color:var(--steel)}
 .me{display:flex;align-items:center;gap:8px;background:var(--paper);border:2px solid var(--ink);border-radius:999px;padding:5px 14px 5px 5px;font-weight:600}
@@ -686,15 +686,26 @@ function openAdminLogin(){
   d.showModal();
   setTimeout(()=>inp.focus(),50);
 }
-let logoTaps=0, logoTimer=null;
-$("#logo").addEventListener("click",()=>{
-  clearTimeout(logoTimer); logoTimer=setTimeout(()=>logoTaps=0,1500);   // Pause > 1,5 s fängt von vorn an
-  if(++logoTaps<5) return;
-  logoTaps=0;
+// Zwei versteckte Gesten am Logo: 5x schnell tippen oder 2 s gedrückt halten
+function adminGesture(){
+  logoTaps=0; clearTimeout(pressTimer);
   if(adminKey) return toast("Admin-Modus ist schon aktiv");
   if(!online) return toast("Dafür brauchst du gerade Netz.");
+  navigator.vibrate?.(30);
   openAdminLogin();
-});
+}
+let logoTaps=0, logoTimer=null, pressTimer=null;
+function logoTap(){
+  clearTimeout(logoTimer); logoTimer=setTimeout(()=>logoTaps=0,1500);   // Pause > 1,5 s fängt von vorn an
+  if(++logoTaps>=5) adminGesture();
+}
+const logoEl=$("#logo");
+logoEl.addEventListener("click",logoTap);
+// Handy: touchend selbst auswerten, sonst schnappt sich der Doppeltipp-Zoom die Taps (unterdrückt auch den doppelten click)
+logoEl.addEventListener("touchend",e=>{ e.preventDefault(); clearTimeout(pressTimer); if(!$("#helpDlg").open) logoTap(); },{passive:false});
+logoEl.addEventListener("pointerdown",()=>{ clearTimeout(pressTimer); pressTimer=setTimeout(adminGesture,2000); });
+["pointerup","pointercancel","pointerleave"].forEach(t=>logoEl.addEventListener(t,()=>clearTimeout(pressTimer)));
+logoEl.addEventListener("contextmenu",e=>e.preventDefault());   // Android: kein Kontextmenü beim langen Drücken
 document.querySelectorAll("#adminBar [data-kind]").forEach(b=>b.addEventListener("click",()=>adminTest(b.dataset.kind,b.dataset.target)));
 $("#adminOff").addEventListener("click",()=>{ adminKey=null; localStorage.removeItem("hive-admin"); toast("Admin-Modus beendet"); render(); });
 activateAdmin();
