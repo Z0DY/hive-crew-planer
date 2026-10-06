@@ -404,13 +404,20 @@ let pushSub = null, pushReady = false, pushMinutes = Number(localStorage.getItem
 const b64uToBytes = s => { s=s.replace(/-/g,"+").replace(/_/g,"/"); s+="=".repeat((4-s.length%4)%4); return Uint8Array.from(atob(s),c=>c.charCodeAt(0)); };
 const bytesToB64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
 
-let pushError = null;
+let pushError = null, swRegError = null;
+const swRegErrorText = e => e?.name==="SecurityError"
+  ? "Der Hintergrunddienst wurde vom Browser blockiert, meist wegen eines ungültigen HTTPS-Zertifikats der Seite."
+  : `Der Hintergrunddienst konnte nicht gestartet werden (${e?.message||e}). Ist sw.js auf dem Server erreichbar?`;
 // Wartet höchstens ms auf den Service Worker – auf iOS kann "ready" sonst ewig hängen
-const swReady = (ms=5000) => Promise.race([navigator.serviceWorker.ready, new Promise((_,rej)=>setTimeout(()=>rej(new Error("Der Hintergrunddienst der App ist noch nicht bereit. App schließen und neu öffnen.")),ms))]);
+const swReady = (ms=5000) => swRegError ? Promise.reject(new Error(swRegErrorText(swRegError))) :
+  Promise.race([navigator.serviceWorker.ready, new Promise((_,rej)=>setTimeout(()=>rej(new Error("Der Hintergrunddienst der App startet noch. Falls das so bleibt: App schließen und neu öffnen.")),ms))]);
 async function initPush(){
   if(!pushSupported){ pushReady=true; return renderNotify(); }
   try{ const reg=await swReady(); pushSub=await reg.pushManager.getSubscription(); pushError=null; }
-  catch(e){ pushError=e.message; }
+  catch(e){
+    pushError=e.message;
+    if(!swRegError) navigator.serviceWorker.ready.then(()=>{ if(pushError) initPush(); });   // startet er später doch noch -> Meldung weg
+  }
   pushReady=true; renderNotify();
   // Abo auf diesem Gerät, aber der Server kennt es nicht (mehr) -> still neu anmelden
   if(pushSub && me && online && Notification.permission==="granted" && !(state.notify||[]).includes(me)) onMeChanged();
@@ -681,7 +688,10 @@ window.addEventListener("online",()=>load());
 window.addEventListener("offline",()=>setOnline(false));
 
 if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("sw.js").catch(()=>{});
+  navigator.serviceWorker.register("sw.js").catch(e=>{
+    swRegError=e; console.error("Service Worker:",e);
+    if(pushReady && !pushSub){ pushError=swRegErrorText(e); renderNotify(); }
+  });
   navigator.serviceWorker.addEventListener("message",async e=>{
     if(e.data?.type==="goto"){ go(e.data.view||"plan"); return; }
     if(e.data?.type!=="synced") return;

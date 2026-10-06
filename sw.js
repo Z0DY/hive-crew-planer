@@ -1,11 +1,12 @@
 // HIVE Crew-Planer – Service Worker
 // Bei App-Updates VERSION erhöhen, damit alle Geräte die neuen Dateien laden.
-const VERSION = "hive-v3";
+const VERSION = "hive-v4";
 const SHELL = ["./", "index.html", "timetable.json", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 const FONT_CACHE = "hive-fonts";
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // Einzeln cachen: eine fehlende Datei darf die Installation nicht verhindern
+  e.waitUntil(caches.open(VERSION).then(c => Promise.allSettled(SHELL.map(f => c.add(f)))).then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", e => {
   e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION && k !== FONT_CACHE).map(k => caches.delete(k))))
