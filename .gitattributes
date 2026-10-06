@@ -1,0 +1,7 @@
+# Nicht auf den Server hochladen (git archive / deploy.ps1)
+.gitignore export-ignore
+.gitattributes export-ignore
+.vscode export-ignore
+README.md export-ignore
+deploy.ps1 export-ignore
+deploy.config.psd1 export-ignore

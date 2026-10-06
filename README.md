@@ -27,9 +27,23 @@
 - Wichtig vor dem Festival: Die App einmal mit Netz öffnen, damit der aktuelle Stand gespeichert ist.
 
 ## App aktualisieren
+**Per Skript (empfohlen):** In `deploy.config.psd1` einmal Server, Benutzer, Pfad und URL eintragen, dann:
+```
+.\deploy.ps1          # Ziel "test"
+```
+oder in VS Code `Strg+Umschalt+B` („Deploy: hive-test“). Das Skript
+- lädt den aktuellen Stand hoch (auch nicht committete Änderungen an bekannten Dateien),
+- lässt `data/` und eine vorhandene `config.php` auf dem Server unangetastet,
+- setzt `VERSION` in `sw.js` automatisch (z. B. `hive-20261006-2215-0f0f2f4`),
+- prüft am Ende, ob die neue Version online ist.
+
+Voraussetzung: Login per SSH-Schlüssel (sonst fragt es zweimal nach dem Passwort). Gelöschte Dateien werden auf dem Server nicht automatisch entfernt.
+
+**Von Hand:**
 1. Neue Dateien hochladen, `data/` und `config.php` nicht überschreiben.
-2. In `sw.js` die Zeile `const VERSION = "hive-v2";` hochzählen (z. B. `hive-v2`).
-3. Die Geräte laden die neue Version beim nächsten Öffnen mit Netz im Hintergrund und zeigen sie beim übernächsten Start.
+2. In `sw.js` die Zeile `const VERSION = "hive-v3";` ändern (z. B. `hive-v4`).
+
+Die Geräte laden die neue Version beim nächsten Öffnen mit Netz im Hintergrund und zeigen sie beim übernächsten Start.
 
 ## Erinnerungen (Push-Nachrichten)
 1. In `timetable.json` bei `"date"` den ersten Event-Tag eintragen, z. B. `"date": "2026-11-14"` (mit Anführungszeichen). Ohne Datum werden keine Erinnerungen verschickt.
