@@ -1,0 +1,56 @@
+{
+  "_hinweis": "Für ein neues Event nur diese Datei anpassen. date = Tag, an dem das Event beginnt (JJJJ-MM-TT). Zeiten vor dayStart zählen zum Folgetag.",
+  "logo": "HIVE",
+  "logoTag": "INDOOR",
+  "title": "HIVE Indoor",
+  "location": "Messe Leipzig",
+  "date": null,
+  "dayStart": "15:00",
+  "timezone": "Europe/Berlin",
+  "stages": [
+    {"id": "tc", "name": "Techno Colosseum", "color": "#D7141A", "sets": [
+      ["15:00", "16:30", "Überkikz B2B Felicie"],
+      ["16:30", "18:00", "Yanamaste"],
+      ["18:00", "19:30", "Klangkuenstler"],
+      ["19:30", "21:00", "Schrotthagen"],
+      ["21:00", "22:30", "Kobosil"],
+      ["22:30", "00:00", "Nico Moreno"],
+      ["00:00", "01:30", "Holy Priest"],
+      ["01:30", "03:30", "Winson B2B Klofama"],
+      ["03:30", "05:00", "Notmytype"]
+    ]},
+    {"id": "iv", "name": "Iron Vault", "color": "#5B3FA0", "sets": [
+      ["15:00", "16:30", "Noise Not War B2B Trümmer (Live)"],
+      ["16:30", "18:00", "Ben Techy B2B Luciid"],
+      ["18:00", "19:30", "Obscure Shape B2B Neon Graveyard"],
+      ["19:30", "21:00", "Nikolina B2B Kloud"],
+      ["21:00", "23:00", "Triptykh B2B O.B.I."],
+      ["23:00", "00:30", "In Verruf B2B Ornella"],
+      ["00:30", "02:00", "Charlie Sparks B2B Nicolas Julian"],
+      ["02:00", "03:30", "A.N.I. B2B Omaks"]
+    ]},
+    {"id": "cb", "name": "Cargo Bay", "color": "#1F5C99", "sets": [
+      ["15:00", "17:00", "Sagezza"],
+      ["17:00", "18:30", "Tiefundton"],
+      ["18:30", "19:30", "Kaacee Komacasper"],
+      ["19:30", "20:30", "Die Gebrüder Brett"],
+      ["20:30", "21:30", "Poltergst"],
+      ["21:30", "22:30", "KØ:LAB & Anuuk & Donchoppa"],
+      ["22:30", "00:00", "GIØ B2B Zwilling."],
+      ["00:00", "01:30", "L.Zwo B2B 2Hot2Play"],
+      ["01:30", "03:00", "DJ Dreckisch B2B Dice"],
+      ["03:00", "05:00", "Noise Mafia B2B Fenrick"]
+    ]},
+    {"id": "rb", "name": "Rage Box", "color": "#D9701A", "sets": [
+      ["15:00", "16:00", "Ally B2B Saltysis"],
+      ["16:00", "17:00", "Ikkhi B2B Titi"],
+      ["17:00", "18:30", "Igda B2B Jovynn"],
+      ["18:30", "20:00", "Natte Visstick B2B Mad Dog"],
+      ["20:00", "21:30", "SLVL B2B Toxic Machinery"],
+      ["21:30", "23:00", "Ush B2B Jowi"],
+      ["23:00", "01:00", "Vortek's B2B William Luck"],
+      ["01:00", "02:30", "Angerfist B2B Vieze Asbak"],
+      ["02:30", "04:00", "Bøery B2B Santøs"]
+    ]}
+  ]
+}

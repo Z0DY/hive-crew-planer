@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#D7141A">
+<title>HIVE Indoor – Crew-Planer</title>
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="HIVE Crew">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --concrete:#E4E5E7; --paper:#FFFFFF; --ink:#23232A; --steel:#7D838B; --line:#CDD0D4;
+  --red:#D7141A; --red-dark:#A50E13;
+  --tc:#D7141A; --iv:#5B3FA0; --cb:#1F5C99; --rb:#D9701A;
+  --slot:58px;
+  --display:"Anton","Impact","Haettenschweiler","Arial Narrow Bold",sans-serif;
+  --body:"Barlow","Segoe UI","Helvetica Neue",Arial,sans-serif;
+  --cond:"Barlow Condensed","Arial Narrow","Roboto Condensed",sans-serif;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--concrete);color:var(--ink);font:16px/1.45 var(--body);-webkit-tap-highlight-color:transparent;padding-bottom:calc(76px + var(--safe-b))}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+
+/* ---------- Kopf mit Speedlines ---------- */
+.hero{position:relative;overflow:hidden;background:#F4F4F5;border-bottom:4px solid var(--red);padding:calc(18px + env(safe-area-inset-top,0px)) 20px 18px}
+.hero::before{content:"";position:absolute;inset:-40% -10%;
+  background:repeating-conic-gradient(from 0deg at 50% 120%,rgba(35,35,42,.10) 0 1.2deg,transparent 1.2deg 4deg,rgba(215,20,26,.10) 4deg 4.6deg,transparent 4.6deg 9deg);
+  pointer-events:none}
+.hero-inner{position:relative;max-width:1280px;margin:0 auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.logo{font-family:var(--display);font-size:clamp(40px,8vw,72px);line-height:.9;color:var(--red);margin:0;letter-spacing:.01em}
+.logo small{display:inline-block;font-family:var(--cond);font-weight:600;font-size:.32em;color:var(--red);border:2px solid var(--red);padding:0 .35em;vertical-align:.95em;margin-left:.2em;letter-spacing:.06em}
+.sub{margin:6px 0 0;font-family:var(--cond);font-weight:600;font-size:18px;color:var(--steel)}
+.me{display:flex;align-items:center;gap:8px;background:var(--paper);border:2px solid var(--ink);border-radius:999px;padding:5px 14px 5px 5px;font-weight:600}
+.me:hover{background:#fafafa}
+
+/* ---------- Navigation ---------- */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;background:var(--ink);padding:6px 6px calc(6px + var(--safe-b))}
+.tabs button{flex:1;border:0;background:none;color:#B9BCC2;font-family:var(--cond);font-weight:700;font-size:17px;padding:10px 4px;border-radius:10px}
+.tabs button[aria-current="page"]{background:var(--red);color:#fff}
+@media(min-width:900px){
+  body{padding-bottom:0}
+  .tabs{position:sticky;top:0;bottom:auto;justify-content:center;gap:6px;padding:8px}
+  .tabs button{flex:0 0 auto;padding:8px 22px}
+}
+main{max-width:1280px;margin:0 auto;padding:16px 12px 32px}
+.view[hidden]{display:none}
+h2{font-family:var(--display);font-weight:400;font-size:30px;margin:8px 0 4px;letter-spacing:.01em}
+.hint{color:var(--steel);margin:0 0 14px;max-width:70ch}
+
+/* ---------- Timetable ---------- */
+.stage-tabs{display:none;gap:6px;overflow-x:auto;margin:0 -12px 10px;padding:0 12px;scrollbar-width:none;position:sticky;top:0;z-index:5;background:var(--concrete);padding-top:8px;padding-bottom:8px}
+.stage-tabs button{flex:0 0 auto;border:2px solid var(--sc);background:var(--paper);color:var(--sc);font-family:var(--cond);font-weight:700;font-size:16px;padding:6px 14px;border-radius:999px;white-space:nowrap}
+.stage-tabs button[aria-pressed="true"]{background:var(--sc);color:#fff}
+.grid-wrap{background:var(--paper);border-radius:6px;box-shadow:0 1px 0 var(--line)}
+.grid{display:grid;grid-template-columns:58px repeat(var(--stages,4),minmax(0,1fr));grid-template-rows:48px repeat(var(--slots,28),var(--slot));position:relative}
+.ghead{grid-row:1;position:sticky;top:52px;z-index:4;display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;font-family:var(--display);font-size:19px;letter-spacing:.03em;padding:0 6px;border-left:2px solid var(--paper)}
+.tlabel{grid-column:1;font-family:var(--cond);font-weight:700;font-size:15px;color:var(--steel);padding:2px 0 0 8px;border-top:1px solid var(--line)}
+.tlabel.half{color:transparent;border-top:1px dashed #E3E5E8}
+.gline{grid-column:2 / -1;border-top:1px solid var(--line);pointer-events:none}
+.gline.half{border-top:1px dashed #EEF0F2}
+.closed{background:repeating-linear-gradient(135deg,#EEEFF1 0 8px,#F7F7F8 8px 16px);border-left:2px solid var(--paper);display:flex;align-items:flex-start;justify-content:center;padding-top:10px;font-family:var(--cond);font-weight:600;color:var(--steel);font-size:14px}
+
+.block{position:relative;margin:2px 3px;border:0;border-left:6px solid var(--sc);border-radius:4px;text-align:left;padding:6px 8px 6px 9px;overflow:hidden;
+  background:color-mix(in srgb,var(--sc) calc(var(--heat,0) * 1%),#FFFFFF);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--sc) 30%,transparent);display:flex;flex-direction:column;gap:3px;min-width:0}
+.block:hover{box-shadow:inset 0 0 0 2px var(--sc)}
+.block .time{font-family:var(--cond);font-weight:700;font-size:14px;color:color-mix(in srgb,var(--sc) 80%,#000)}
+.block .artist{font-family:var(--display);font-size:17px;line-height:1.08;letter-spacing:.01em;word-break:break-word}
+.block.hot{color:#fff}
+.block.hot .time{color:rgba(255,255,255,.85)}
+.block.mine{box-shadow:inset 0 0 0 3px var(--ink)}
+.block.maybe{box-shadow:inset 0 0 0 3px var(--ink);background-image:repeating-linear-gradient(135deg,rgba(35,35,42,.06) 0 6px,transparent 6px 12px)}
+.block .flag{position:absolute;top:5px;right:5px;width:24px;height:24px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:700}
+.block .flag.warn{background:var(--red);animation:pulse 1.6s ease-in-out 2}
+@keyframes pulse{50%{transform:scale(1.25)}}
+.chips{display:flex;flex-wrap:wrap;gap:3px;margin-top:auto}
+.chip{display:inline-grid;place-items:center;min-width:24px;height:24px;padding:0 6px;border-radius:999px;background:var(--uc);color:#fff;font-family:var(--cond);font-weight:700;font-size:13px;line-height:1;border:2px solid #fff}
+.chip.maybe{background:#fff;color:var(--uc);border:2px dashed var(--uc)}
+.chip.big{min-width:34px;height:34px;font-size:16px}
+.count{font-family:var(--cond);font-weight:700;font-size:13px;align-self:center;margin-left:2px}
+
+@media(max-width:899px){
+  :root{--slot:64px}
+  .stage-tabs{display:flex}
+  .grid{grid-template-columns:52px minmax(0,1fr)}
+  .ghead{display:none}
+  .grid{grid-template-rows:0 repeat(var(--slots,28),var(--slot))}
+  .block,.closed{grid-column:2 !important;display:none}
+  .gline{grid-column:2}
+  .block .artist{font-size:20px}
+}
+
+/* ---------- Mein Plan ---------- */
+.plan{list-style:none;margin:0;padding:0;max-width:720px}
+.plan li{display:grid;grid-template-columns:96px 1fr;gap:12px;align-items:start}
+.plan .ptime{font-family:var(--cond);font-weight:700;font-size:18px;padding-top:12px;text-align:right}
+.pcard{width:100%;background:var(--paper);border:0;border-left:6px solid var(--sc);border-radius:4px;padding:10px 12px;margin:4px 0;text-align:left;display:flex;flex-direction:column;gap:4px}
+.pcard .artist{font-family:var(--display);font-size:22px;line-height:1.1}
+.pcard .meta{font-family:var(--cond);font-weight:600;color:var(--steel);font-size:16px}
+.pcard.conflict{box-shadow:inset 0 0 0 3px var(--red)}
+.pcard .warn{color:var(--red);font-weight:700;font-size:14px}
+.gap{grid-column:2;font-family:var(--cond);font-weight:600;color:var(--steel);padding:2px 12px;border-left:2px dotted var(--line);margin-left:3px}
+.empty{background:var(--paper);border-radius:6px;padding:24px;max-width:560px}
+.empty p{margin:0 0 12px}
+
+/* ---------- Crew ---------- */
+.crew-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.person{background:var(--paper);border-radius:6px;padding:12px;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}
+.person .actions{display:flex;gap:6px}
+@media(max-width:520px){.person{grid-template-columns:auto 1fr}.person .actions{grid-column:1/-1;justify-content:flex-end}}
+.person .name{font-weight:700;font-size:18px}
+.person .stats{font-family:var(--cond);font-weight:600;color:var(--steel)}
+.person .stats .bad{color:var(--red)}
+.person.self{box-shadow:inset 0 0 0 2px var(--ink)}
+.iconbtn{border:2px solid var(--line);background:none;border-radius:8px;padding:6px 10px;font-size:14px;font-weight:600}
+.iconbtn:hover{border-color:var(--ink)}
+.top{list-style:none;margin:0 0 24px;padding:0;max-width:720px;display:flex;flex-direction:column;gap:6px}
+.top li button{width:100%;display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;background:var(--paper);border:0;border-left:6px solid var(--sc);border-radius:4px;padding:8px 12px;text-align:left}
+.top .rank{font-family:var(--display);font-size:26px;color:var(--steel)}
+.top .artist{font-family:var(--display);font-size:19px;line-height:1.1}
+.top .meta{font-family:var(--cond);font-weight:600;color:var(--steel);font-size:15px}
+
+/* ---------- Dialoge ---------- */
+dialog{border:0;padding:0;border-radius:14px;max-width:min(520px,calc(100vw - 24px));width:100%;color:var(--ink);background:var(--paper);box-shadow:0 30px 80px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(20,20,26,.55)}
+@media(max-width:899px){
+  dialog.sheet{margin:auto 0 0;max-width:100vw;border-radius:16px 16px 0 0;padding-bottom:var(--safe-b)}
+  dialog.sheet[open]{animation:up .22s ease-out}
+  @keyframes up{from{transform:translateY(40%);opacity:.4}}
+}
+.dlg-head{padding:18px 20px 12px;border-bottom:4px solid var(--sc,var(--red))}
+.dlg-head .meta{font-family:var(--cond);font-weight:700;color:var(--sc,var(--steel));font-size:17px}
+.dlg-head h3{margin:2px 0 0;font-family:var(--display);font-weight:400;font-size:30px;line-height:1.05}
+.dlg-body{padding:16px 20px 20px}
+.status{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.status button{border:2px solid var(--ink);background:var(--paper);border-radius:10px;padding:12px 6px;font-weight:700;font-size:15px}
+.status button[aria-pressed="true"]{background:var(--ink);color:#fff}
+.status button.yes[aria-pressed="true"]{background:var(--red);border-color:var(--red)}
+.who h4{margin:12px 0 6px;font-family:var(--cond);font-weight:700;font-size:16px;color:var(--steel)}
+.who ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.who li{display:flex;align-items:center;gap:6px;font-weight:600}
+.warnbox{background:#FDECEC;color:var(--red-dark);border-radius:8px;padding:10px 12px;margin-bottom:14px;font-weight:600}
+.close{position:absolute;top:10px;right:10px;border:0;background:none;font-size:26px;line-height:1;padding:6px 10px;color:var(--steel)}
+.field{display:flex;gap:8px;margin-top:8px}
+.field input{flex:1;min-width:0;font:inherit;font-size:17px;padding:12px 14px;border:2px solid var(--line);border-radius:10px}
+.field input:focus{border-color:var(--ink);outline:none}
+.primary{border:0;background:var(--red);color:#fff;font-weight:700;padding:12px 18px;border-radius:10px}
+.primary:hover{background:var(--red-dark)}
+.pick-list{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 18px}
+.pick-list button{display:flex;align-items:center;gap:8px;border:2px solid var(--line);background:var(--paper);border-radius:999px;padding:4px 14px 4px 4px;font-weight:600}
+.pick-list button:hover{border-color:var(--ink)}
+.err{color:var(--red-dark);font-weight:600;min-height:1.4em;margin:8px 0 0}
+.toast{position:fixed;left:50%;bottom:calc(90px + var(--safe-b));transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-weight:600;z-index:50;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+.admin-actions{display:flex;gap:6px;flex-wrap:wrap}
+.notify-card{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--paper);border-radius:6px;padding:12px 14px;margin:0 0 16px;max-width:720px;border-left:6px solid var(--steel)}
+.notify-card.on{border-left-color:#1F7A4D}
+.notify-card .bell{font-size:24px}
+.notify-card .ntext{flex:1;min-width:200px;font-weight:600}
+.notify-card .diag{color:var(--steel);font-weight:500;font-size:13px;margin-top:4px}
+.notify-card .warn{color:var(--red-dark);font-weight:600;font-size:14px;margin-top:4px}
+.adminbar{display:flex;flex-direction:column;align-items:flex-start;gap:10px;background:var(--paper);border-left:6px solid var(--ink);border-radius:4px;padding:10px 12px;margin-bottom:10px;font-weight:600}
+.sync{position:sticky;top:0;z-index:15;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--ink);color:#fff;padding:8px 14px;font-size:15px}
+.sync .dot{width:10px;height:10px;border-radius:50%;background:#F2B705;flex:none}
+.sync.pending .dot{background:#5BC27A;animation:pulse 1s ease-in-out infinite}
+.sync .txt{flex:1;min-width:0}
+.sync button{border:1px solid rgba(255,255,255,.5);background:none;color:#fff;border-radius:8px;padding:4px 10px;font-size:14px;font-weight:600}
+@media(max-width:899px){.sync{position:fixed;left:0;right:0;top:auto;bottom:calc(57px + var(--safe-b))}body.has-sync{padding-bottom:calc(140px + var(--safe-b))}}
+@media(min-width:900px){.sync{top:52px}}
+.hero-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.install{border:2px solid var(--red);background:var(--paper);color:var(--red);border-radius:999px;padding:7px 14px;font-weight:700}
+.install:hover{background:#FDECEC}
+.steps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:10px}
+.steps li{padding-left:4px}
+.share-ico{display:inline-block;vertical-align:-3px;width:18px;height:18px}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+<style id="stageCss"></style>
+</head>
+<body data-stage="tc">
+<header class="hero">
+  <div class="hero-inner">
+    <div>
+      <h1 class="logo" id="logo">HIVE<small>INDOOR</small></h1>
+      <p class="sub" id="subtitle">Crew-Planer</p>
+    </div>
+    <div class="hero-actions">
+      <button class="install" id="installBtn" hidden>App installieren</button>
+      <button class="me" id="meBtn" hidden></button>
+    </div>
+  </div>
+</header>
+<div class="sync" id="sync" role="status" aria-live="polite" hidden></div>
+<nav class="tabs" aria-label="Ansicht">
+  <button data-view="timetable" aria-current="page">Timetable</button>
+  <button data-view="plan">Mein Plan</button>
+  <button data-view="crew">Crew</button>
+</nav>
+
+<main>
+  <section class="view" id="view-timetable">
+    <p class="hint">Tippe auf einen Act und sag, ob du dabei bist. Je kräftiger die Farbe, desto mehr von euch sind dort.</p>
+    <div class="stage-tabs" id="stageTabs" role="group" aria-label="Stage wählen"></div>
+    <div class="grid-wrap"><div class="grid" id="grid"></div></div>
+  </section>
+
+  <section class="view" id="view-plan" hidden>
+    <h2>Mein Plan</h2>
+    <p class="hint" id="planHint"></p>
+    <div id="notifyCard"></div>
+    <div id="plan"></div>
+  </section>
+
+  <section class="view" id="view-crew" hidden>
+    <h2>Wo die Crew hinwill</h2>
+    <p class="hint">Die Acts mit den meisten Zusagen.</p>
+    <ol class="top" id="top"></ol>
+    <h2>Crew</h2>
+    <p class="hint">Rote Zahl = Acts, die sich bei dieser Person zeitlich überschneiden.</p>
+    <div class="adminbar" id="adminBar" hidden>
+      <div><b>Admin-Modus aktiv.</b> Du kannst Personen entfernen und Erinnerungen testen. <span id="adminDate"></span></div>
+      <div class="admin-actions">
+        <button class="iconbtn" data-kind="simple" data-target="me">Test an mich</button>
+        <button class="iconbtn" data-kind="reminder" data-target="me">Erinnerung simulieren</button>
+        <button class="iconbtn" data-kind="simple" data-target="all">Test an alle</button>
+        <button class="iconbtn" id="adminOff">Admin-Modus beenden</button>
+      </div>
+    </div>
+    <div class="crew-grid" id="crew"></div>
+  </section>
+</main>
+
+<dialog id="setDlg" class="sheet"></dialog>
+<dialog id="joinDlg"></dialog>
+<dialog id="helpDlg"></dialog>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ======== Timetable (Quelle: Instagram @hive_festival) ======== */
+// Die Timetable kommt aus timetable.json – für ein neues Event nur diese Datei austauschen.
+let EVENT = {}, STAGES = [], SETS = [], SET_BY_ID = {}, DAY_START = 15*60, SLOTS = 28;
+const USER_COLORS = ["#D7141A","#1F7A4D","#1F5C99","#D9701A","#5B3FA0","#B0177A","#0E8C8C","#7A5C12","#3D4C5C","#C23B5E","#4E7A12","#8A2BE2"];
+const toMin = t => { let [h,m]=t.split(":").map(Number); let v=h*60+m; if(v<DAY_START) v+=1440; return v-DAY_START; };
+function initTimetable(tt){
+  EVENT = tt; STAGES = tt.stages;
+  const [dh,dm] = (tt.dayStart||"15:00").split(":").map(Number); DAY_START = dh*60+dm;
+  SETS = [];
+  STAGES.forEach((st,si)=>st.sets.forEach(([a,b,artist],i)=>SETS.push({id:`${st.id}-${i+1}`,stage:st,si,start:a,end:b,s:toMin(a),e:toMin(b),artist})));
+  SET_BY_ID = Object.fromEntries(SETS.map(s=>[s.id,s]));
+  SLOTS = Math.ceil(Math.max(...SETS.map(s=>s.e))/30);
+  const g=$("#grid"); g.style.setProperty("--slots",SLOTS); g.style.setProperty("--stages",STAGES.length);
+  $("#stageCss").textContent = `@media(max-width:899px){${STAGES.map(st=>`body[data-stage="${st.id}"] [data-stage="${st.id}"]`).join(",")}{display:flex}}`;
+  $("#logo").replaceChildren(tt.logo||tt.title||"Crew", tt.logoTag?h("small",{},tt.logoTag):"");
+  $("#subtitle").textContent = tt.location?`${tt.location} – Crew-Planer`:"Crew-Planer";
+  document.title = `${tt.title||"Event"} – Crew-Planer`;
+  if(!STAGES.some(st=>st.id===document.body.dataset.stage)) document.body.dataset.stage = STAGES[0]?.id||"";
+}
+
+/* ======== Zustand ======== */
+let state = {rev:-1, users:[], picks:{}};
+let me = localStorage.getItem("hive-user") || null;
+let adminKey = localStorage.getItem("hive-admin") || null;
+let view = "timetable";
+
+const $ = s => document.querySelector(s);
+function h(tag, attrs={}, ...kids){
+  const el=document.createElement(tag);
+  for(const [k,v] of Object.entries(attrs||{})){
+    if(v==null||v===false) continue;
+    if(k==="class") el.className=v; else if(k==="style") el.style.cssText=v;
+    else if(k.startsWith("on")) el.addEventListener(k.slice(2),v); else el.setAttribute(k,v===true?"":v);
+  }
+  for(const c of kids.flat()) if(c!=null&&c!==false) el.append(c.nodeType?c:document.createTextNode(c));
+  return el;
+}
+const userById = id => state.users.find(u=>u.id===id);
+const ucolor = u => USER_COLORS[(u?.color||0)%USER_COLORS.length];
+const initials = n => { const p=n.trim().split(/\s+/); return (p.length>1?p[0][0]+p[1][0]:n.slice(0,2)).toUpperCase(); };
+const picksOf = uid => state.picks[uid] || {};
+const statusOf = (uid,setId) => picksOf(uid)[setId] || null;
+function attendees(setId){
+  const yes=[],maybe=[];
+  for(const u of state.users){ const s=statusOf(u.id,setId); if(s==="yes") yes.push(u); else if(s==="maybe") maybe.push(u); }
+  return {yes,maybe};
+}
+function conflictsOf(uid){
+  const mine = SETS.filter(s=>statusOf(uid,s.id)==="yes"), bad=new Set();
+  for(const a of mine) for(const b of mine) if(a!==b && a.s<b.e && b.s<a.e){bad.add(a.id);bad.add(b.id);}
+  return bad;
+}
+function chip(u, maybe=false, big=false){
+  return h("span",{class:`chip${maybe?" maybe":""}${big?" big":""}`,style:`--uc:${ucolor(u)}`,title:u.name+(maybe?" (vielleicht)":"")},initials(u.name));
+}
+function toast(msg){ const t=$("#toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove("show"),2200); }
+
+/* ======== Offline-Speicher (IndexedDB, geteilt mit dem Service Worker) ======== */
+const idb = () => new Promise((res,rej)=>{ const r=indexedDB.open("hive",1); r.onupgradeneeded=()=>r.result.createObjectStore("kv"); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+async function kvGet(k){ const db=await idb(); return new Promise((res,rej)=>{ const q=db.transaction("kv").objectStore("kv").get(k); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); }
+async function kvPut(k,v){ const db=await idb(); return new Promise((res,rej)=>{ const tx=db.transaction("kv","readwrite"); tx.objectStore("kv").put(v,k); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
+
+let server = {rev:-1, users:[], picks:{}};   // letzter bekannter Stand vom Server
+let outbox = [];                               // eigene Änderungen, die noch nicht beim Server angekommen sind
+let syncedAt = null;                           // Zeitpunkt des letzten erfolgreichen Abgleichs
+let online = navigator.onLine;
+const norm = s => { if(!s.picks||Array.isArray(s.picks)) s.picks={}; return s; };
+const timeout = ms => { const c=new AbortController(); setTimeout(()=>c.abort(),ms); return c.signal; };
+
+function rebuild(){   // Anzeige = Server-Stand + eigene offene Änderungen
+  const s = JSON.parse(JSON.stringify(server));
+  for(const op of outbox){
+    if(op.action==="pick"){ const p=s.picks[op.user]=s.picks[op.user]||{}; if(op.status==="yes"||op.status==="maybe") p[op.set]=op.status; else delete p[op.set]; }
+    if(op.action==="rename"){ const u=s.users.find(x=>x.id===op.user); if(u) u.name=op.name; }
+  }
+  state = s;
+}
+async function setServer(s){ server=norm(s); syncedAt=Date.now(); await kvPut("state",{state:server,at:syncedAt}).catch(()=>{}); }
+function setOnline(v){ online=v; renderSync(); }
+
+async function load(){
+  if(outbox.length) return flush();
+  try{
+    const r = await fetch(`api.php?rev=${server.rev}`,{cache:"no-store",signal:timeout(8000)}); if(!r.ok) throw 0;
+    const s = await r.json();
+    if(s.unchanged){ syncedAt=Date.now(); kvPut("state",{state:server,at:syncedAt}).catch(()=>{}); }
+    else { await setServer(s); rebuild(); render(); }
+    setOnline(true);
+  }catch(e){ setOnline(false); }
+}
+let flushing=false;
+async function flush(){
+  if(flushing) return; flushing=true;
+  try{
+    outbox = (await kvGet("outbox").catch(()=>null)) ?? outbox;   // evtl. hat der Service Worker schon gesendet
+    if(!outbox.length){ rebuild(); flushing=false; return load(); }
+    const sent = new Set(outbox.map(o=>o.id));
+    const r = await fetch("api.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"batch",ops:outbox}),signal:timeout(10000)});
+    if(!r.ok) throw 0;
+    const j = await r.json();
+    outbox = ((await kvGet("outbox").catch(()=>null)) ?? outbox).filter(o=>!sent.has(o.id));
+    await kvPut("outbox",outbox).catch(()=>{});
+    await setServer(j.state); rebuild(); render(); setOnline(true);
+    if(j.skipped?.length) toast("Einige Änderungen konnten nicht übernommen werden.");
+  }catch(e){ setOnline(false); }
+  finally{ flushing=false; }
+}
+async function queueOp(op){
+  op.id = Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+  const key = o => `${o.action}|${o.user}|${o.set||""}`;
+  outbox = outbox.filter(o=>key(o)!==key(op)); outbox.push(op);
+  await kvPut("outbox",outbox).catch(()=>{});
+  rebuild(); render(); renderSync();
+  flush();
+  // Android/Chrome: Browser sendet die Warteschlange auch bei geschlossener App, sobald wieder Netz da ist
+  if(navigator.serviceWorker?.controller) navigator.serviceWorker.ready.then(r=>r.sync?.register("outbox")).catch(()=>{});
+}
+async function api(body){   // Aktionen, die sofort Netz brauchen (Anlegen, Entfernen, Admin)
+  let r;
+  try{ r = await fetch("api.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:timeout(10000)}); }
+  catch(e){ setOnline(false); throw new Error("Dafür brauchst du gerade Netz. Versuch es gleich nochmal."); }
+  const j = await r.json().catch(()=>({error:"Antwort vom Server unlesbar."}));
+  if(!r.ok||j.error) throw new Error(j.error||"Fehler beim Speichern.");
+  setOnline(true);
+  if(j.state){ await setServer(j.state); rebuild(); render(); }
+  return j;
+}
+function setPick(setId,status){ queueOp({action:"pick",user:me,set:setId,status:status||"none"}); }
+
+function fmtAge(t){
+  if(!t) return "noch nie";
+  const d=new Date(t), m=Math.round((Date.now()-t)/60000);
+  const hm=d.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"});
+  if(m<1) return `gerade eben (${hm})`;
+  if(m<60) return `vor ${m} Min. (${hm})`;
+  return d.toDateString()===new Date().toDateString()?`${hm} Uhr`:d.toLocaleString("de-DE",{weekday:"short",hour:"2-digit",minute:"2-digit"});
+}
+function renderSync(){
+  const b=$("#sync"), n=outbox.length;
+  if(online && !n){ b.hidden=true; document.body.classList.remove("has-sync"); return; }
+  b.hidden=false; document.body.classList.add("has-sync"); b.classList.toggle("pending",online&&n>0);
+  b.replaceChildren(
+    h("span",{class:"dot"}),
+    h("span",{class:"txt"}, online
+      ? `Sende ${n} ${n===1?"Änderung":"Änderungen"} …`
+      : [h("b",{},"Offline"), ` – Stand ${fmtAge(syncedAt)}`, n?`. ${n} ${n===1?"Änderung wartet":"Änderungen warten"} auf Netz.`:"."]),
+    online?null:h("button",{onclick:()=>{ b.querySelector(".txt").textContent="Verbinde …"; load(); }},"Erneut versuchen"));
+}
+
+/* ======== Erinnerungen (Web Push) ======== */
+const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone===true;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+const pushSupported = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+let pushSub = null, pushReady = false, pushMinutes = Number(localStorage.getItem("hive-push-min")) || 15;
+const b64uToBytes = s => { s=s.replace(/-/g,"+").replace(/_/g,"/"); s+="=".repeat((4-s.length%4)%4); return Uint8Array.from(atob(s),c=>c.charCodeAt(0)); };
+const bytesToB64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+
+let pushError = null;
+// Wartet höchstens ms auf den Service Worker – auf iOS kann "ready" sonst ewig hängen
+const swReady = (ms=5000) => Promise.race([navigator.serviceWorker.ready, new Promise((_,rej)=>setTimeout(()=>rej(new Error("Der Hintergrunddienst der App ist noch nicht bereit. App schließen und neu öffnen.")),ms))]);
+async function initPush(){
+  if(!pushSupported){ pushReady=true; return renderNotify(); }
+  try{ const reg=await swReady(); pushSub=await reg.pushManager.getSubscription(); pushError=null; }
+  catch(e){ pushError=e.message; }
+  pushReady=true; renderNotify();
+  // Abo auf diesem Gerät, aber der Server kennt es nicht (mehr) -> still neu anmelden
+  if(pushSub && me && online && Notification.permission==="granted" && !(state.notify||[]).includes(me)) onMeChanged();
+}
+function onMeChanged(){ if(pushSub && me && online) api({action:"subscribe",user:me,sub:pushSub.toJSON()}).catch(()=>{}); }
+async function enablePush(){
+  if(!online) return toast("Dafür brauchst du gerade Netz.");
+  try{
+    const perm = await Notification.requestPermission();
+    if(perm!=="granted"){ renderNotify(); return toast("Ohne Erlaubnis gibt es keine Erinnerungen."); }
+    const reg = await swReady(8000);
+    const v = await (await fetch("api.php?vapid=1",{cache:"no-store"})).json();
+    if(!v.publicKey) throw new Error(v.error||"Der Server unterstützt keine Erinnerungen.");
+    pushMinutes = v.minutes||15; localStorage.setItem("hive-push-min",pushMinutes);
+    let sub = await reg.pushManager.getSubscription();
+    if(sub && sub.options?.applicationServerKey && bytesToB64u(sub.options.applicationServerKey)!==v.publicKey){ await sub.unsubscribe(); sub=null; }
+    if(!sub) sub = await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:b64uToBytes(v.publicKey)});
+    await api({action:"subscribe",user:me,sub:sub.toJSON()});
+    pushSub=sub; pushError=null; renderNotify(); toast("Erinnerungen aktiviert");
+  }catch(e){ pushError=e.message||String(e); renderNotify(); toast(pushError); }
+}
+async function disablePush(){
+  try{ if(pushSub){ await api({action:"unsubscribe",endpoint:pushSub.endpoint}).catch(()=>{}); await pushSub.unsubscribe(); } }catch(e){}
+  pushSub=null; renderNotify(); toast("Erinnerungen ausgeschaltet");
+}
+function renderNotify(){
+  const box=$("#notifyCard"); if(!box) return;
+  let icon="🔔", text, btn=null;
+  if(!pushReady){
+    icon="⏳"; text="Erinnerungen werden vorbereitet …";
+  } else if(!pushSupported){
+    if(isIOS && !standalone){ text="Auf dem iPhone gibt es Erinnerungen nur in der installierten App."; btn=h("button",{class:"iconbtn",onclick:()=>$("#installBtn").click()},"So installierst du sie"); }
+    else text="Dieser Browser unterstützt keine Erinnerungen.";
+    icon="🔕";
+  } else if(Notification.permission==="denied"){
+    icon="🔕"; text="Benachrichtigungen sind für diese Seite blockiert. Erlaube sie in den Einstellungen des Browsers bzw. der App und tippe dann hier erneut.";
+    btn=h("button",{class:"iconbtn",onclick:enablePush},"Erneut versuchen");
+  } else if(pushSub){
+    text=`Erinnerungen sind an: ${pushMinutes} Min. vor jedem Act mit ✔, inklusive wer mitkommt.`;
+    btn=h("button",{class:"iconbtn",onclick:disablePush},"Ausschalten");
+  } else {
+    icon="🔕"; text=`Lass dich ${pushMinutes} Min. vor deinen Acts erinnern, auch wenn die App geschlossen ist.`;
+    btn=h("button",{class:"primary",onclick:enablePush},"Erinnerungen aktivieren");
+  }
+  box.className=`notify-card${pushSub?" on":""}`;
+  const diag = `${isIOS?"iOS":"Android/PC"}, ${standalone?"installiert":"Browser"}, SW ${navigator.serviceWorker?.controller?"aktiv":"inaktiv"}, Push ${pushSupported?"ja":"nein"}, Erlaubnis ${"Notification" in window?Notification.permission:"–"}`;
+  box.replaceChildren(h("span",{class:"bell","aria-hidden":"true"},icon),h("div",{class:"ntext"},text,
+    pushError?h("div",{class:"warn"},pushError):null,
+    (adminKey||pushError||!pushSupported)?h("div",{class:"diag"},"Diagnose: "+diag):null,
+    adminKey&&!EVENT.date?h("div",{class:"warn"},"Admin-Hinweis: In timetable.json fehlt das Event-Datum. Ohne Datum verschickt der Server keine Erinnerungen."):null),...(btn?[btn]:[]));
+}
+async function adminTest(kind,target){
+  if(target==="all" && !confirm("Testnachricht an alle Geräte mit aktivierten Erinnerungen senden?")) return;
+  try{
+    const j=await api({action:"testpush",key:adminKey,user:me,target,kind});
+    const r=j.report, d=$("#helpDlg");
+    d.replaceChildren(
+      h("button",{class:"close","aria-label":"Schließen",onclick:()=>d.close()},"×"),
+      h("div",{class:"dlg-head"},h("div",{class:"meta"},"Admin-Test"),h("h3",{},r.ok===r.devices?"Gesendet":"Teilweise gesendet")),
+      h("div",{class:"dlg-body"},
+        h("p",{style:"margin:0 0 10px"},`An ${r.ok} von ${r.devices} ${r.devices===1?"Gerät":"Geräten"} (${r.people} ${r.people===1?"Person":"Personen"}) ausgeliefert.`),
+        r.removed?h("p",{style:"margin:0 0 10px"},`${r.removed} abgelaufene ${r.removed===1?"Anmeldung wurde":"Anmeldungen wurden"} entfernt (App gelöscht oder Erlaubnis entzogen).`):null,
+        h("p",{class:"hint",style:"margin:0"},"Kommt nichts an? Prüfe, ob Benachrichtigungen für die App erlaubt sind und kein Fokus- oder Nicht-stören-Modus aktiv ist. Auf dem iPhone muss die App über das Icon auf dem Home-Bildschirm geöffnet worden sein.")));
+    d.showModal();
+  }catch(e){ toast(e.message); }
+}
+
+/* ======== Timetable ======== */
+function renderStageTabs(){
+  const box=$("#stageTabs"); box.replaceChildren();
+  const cur=document.body.dataset.stage;
+  STAGES.forEach(st=>box.append(h("button",{style:`--sc:${st.color}`,"aria-pressed":String(st.id===cur),
+    onclick:()=>{document.body.dataset.stage=st.id; localStorage.setItem("hive-stage",st.id); renderStageTabs();}},st.name)));
+}
+function renderGrid(){
+  const g=$("#grid"); g.replaceChildren();
+  const myBad = me?conflictsOf(me):new Set();
+  const n = Math.max(1,state.users.length);
+  STAGES.forEach((st,si)=>g.append(h("div",{class:"ghead",style:`grid-column:${si+2};background:${st.color}`},st.name)));
+  for(let k=0;k<SLOTS;k++){
+    const half=k%2===1, mins=DAY_START+k*30, hh=String(Math.floor(mins/60)%24).padStart(2,"0");
+    g.append(h("div",{class:`tlabel${half?" half":""}`,style:`grid-row:${k+2}`},`${hh}:${half?"30":"00"}`));
+    g.append(h("div",{class:`gline${half?" half":""}`,style:`grid-row:${k+2}`}));
+  }
+  STAGES.forEach((st,si)=>{
+    const last=Math.max(...SETS.filter(s=>s.stage===st).map(s=>s.e));
+    if(last<SLOTS*30) g.append(h("div",{class:"closed","data-stage":st.id,style:`grid-column:${si+2};grid-row:${last/30+2} / ${SLOTS+2}`},"Stage zu"));
+  });
+  for(const s of SETS){
+    const {yes,maybe}=attendees(s.id), my=me?statusOf(me,s.id):null;
+    const heat = yes.length ? Math.round(12 + 36*(yes.length/n)) : (maybe.length?5:0);
+    const cls = ["block"]; if(my==="yes") cls.push("mine"); if(my==="maybe") cls.push("maybe");
+    const chips=h("span",{class:"chips"});
+    const show=[...yes.map(u=>[u,false]),...maybe.map(u=>[u,true])], MAX=(s.e-s.s)>=90?8:4;
+    show.slice(0,MAX).forEach(([u,m])=>chips.append(chip(u,m)));
+    if(show.length>MAX) chips.append(h("span",{class:"count"},`+${show.length-MAX}`));
+    const bad = myBad.has(s.id);
+    g.append(h("button",{class:cls.join(" "),"data-stage":s.stage.id,
+      style:`grid-column:${s.si+2};grid-row:${s.s/30+2} / ${s.e/30+2};--sc:${s.stage.color};--heat:${heat}`,
+      "aria-label":`${s.artist}, ${s.start} bis ${s.end}, ${yes.length} dabei`,onclick:()=>openSet(s.id)},
+      h("span",{class:"time"},`${s.start}–${s.end}`),
+      h("span",{class:"artist"},s.artist),
+      chips,
+      my? h("span",{class:`flag${bad?" warn":""}`,title:bad?"Überschneidung":""},bad?"!":(my==="yes"?"✓":"?")) : null
+    ));
+  }
+}
+
+/* ======== Act-Dialog ======== */
+let openSetId=null;
+function openSet(setId,refreshOnly=false){
+  const d=$("#setDlg");
+  if(refreshOnly && (!d.open||openSetId!==setId)) return;
+  openSetId=setId;
+  const s=SET_BY_ID[setId], my=me?statusOf(me,setId):null, {yes,maybe}=attendees(setId);
+  const clashes = me && my==="yes" ? SETS.filter(o=>o!==s&&statusOf(me,o.id)==="yes"&&o.s<s.e&&s.s<o.e) : [];
+  const par = SETS.filter(o=>o.stage!==s.stage&&o.s<s.e&&s.s<o.e);
+  d.style.setProperty("--sc",s.stage.color);
+  const btn=(val,label,cls)=>h("button",{class:cls,"aria-pressed":String(my===val),onclick:()=>setPick(setId,val)},label);
+  const list=(title,arr,m)=>arr.length?h("div",{class:"who"},h("h4",{},title),h("ul",{},arr.map(u=>h("li",{},chip(u,m),u.name+(u.id===me?" (du)":""))))):null;
+  d.replaceChildren(
+    h("button",{class:"close","aria-label":"Schließen",onclick:()=>d.close()},"×"),
+    h("div",{class:"dlg-head"},h("div",{class:"meta"},`${s.stage.name}, ${s.start}–${s.end}`),h("h3",{},s.artist)),
+    h("div",{class:"dlg-body"},
+      clashes.length?h("div",{class:"warnbox"},"Überschneidet sich mit: "+clashes.map(c=>`${c.artist} (${c.start})`).join(", ")):null,
+      h("div",{class:"status",role:"group","aria-label":"Mein Status"},
+        btn("yes","Bin dabei","yes"),btn("maybe","Vielleicht",""),btn(null,"Nicht dabei","")),
+      list(`Dabei (${yes.length})`,yes,false),
+      list(`Vielleicht (${maybe.length})`,maybe,true),
+      !yes.length&&!maybe.length?h("p",{class:"hint"},"Noch hat sich niemand eingetragen."):null,
+      h("div",{class:"who"},h("h4",{},"Parallel auf den anderen Stages"),
+        h("ul",{style:"flex-direction:column;gap:4px"},par.map(o=>{const a=attendees(o.id);
+          return h("li",{},h("span",{style:`width:10px;height:10px;border-radius:2px;background:${o.stage.color};flex:none`}),
+            `${o.artist} (${o.start}–${o.end})`,a.yes.length?h("span",{class:"count"},`👥 ${a.yes.length}`):null);})))
+    )
+  );
+  if(!d.open) d.showModal();
+}
+$("#setDlg").addEventListener("click",e=>{ if(e.target.id==="setDlg") e.target.close(); });
+
+/* ======== Mein Plan ======== */
+function renderPlan(){
+  const box=$("#plan"); box.replaceChildren(); renderNotify();
+  const u=userById(me);
+  $("#planHint").textContent = u?`Alle Acts, die ${u.name} markiert hat, in zeitlicher Reihenfolge.`:"";
+  const mine=SETS.filter(s=>statusOf(me,s.id)).sort((a,b)=>a.s-b.s||a.si-b.si);
+  if(!mine.length){
+    box.append(h("div",{class:"empty"},h("p",{},"Du hast noch keine Acts markiert."),
+      h("button",{class:"primary",onclick:()=>go("timetable")},"Zur Timetable")));
+    return;
+  }
+  const bad=conflictsOf(me), ol=h("ol",{class:"plan"});
+  let prevEnd=null;
+  for(const s of mine){
+    if(prevEnd!=null && s.s>prevEnd){ const m=s.s-prevEnd; ol.append(h("li",{},h("span"),h("div",{class:"gap"},`${m>=60?Math.floor(m/60)+" h ":""}${m%60?m%60+" min ":""}frei`))); }
+    const {yes,maybe}=attendees(s.id), others=[...yes.filter(x=>x.id!==me)], st=statusOf(me,s.id);
+    ol.append(h("li",{},h("div",{class:"ptime"},s.start),
+      h("button",{class:`pcard${bad.has(s.id)?" conflict":""}`,style:`--sc:${s.stage.color}`,onclick:()=>openSet(s.id)},
+        h("span",{class:"artist"},s.artist),
+        h("span",{class:"meta"},`${s.stage.name}, bis ${s.end}${st==="maybe"?", vielleicht":""}`),
+        bad.has(s.id)?h("span",{class:"warn"},"Überschneidung mit einem anderen Act"):null,
+        others.length||maybe.filter(x=>x.id!==me).length?h("span",{class:"chips"},others.map(x=>chip(x)),maybe.filter(x=>x.id!==me).map(x=>chip(x,true))):h("span",{class:"meta"},"Bisher nur du"))));
+    prevEnd=Math.max(prevEnd??0,s.e);
+  }
+  box.append(ol);
+}
+
+/* ======== Crew ======== */
+function renderCrew(){
+  const top=$("#top"); top.replaceChildren();
+  const ranked=SETS.map(s=>({s,...attendees(s.id)})).filter(x=>x.yes.length).sort((a,b)=>b.yes.length-a.yes.length||a.s.s-b.s.s).slice(0,8);
+  if(!ranked.length) top.append(h("li",{class:"hint"},"Noch keine Zusagen."));
+  ranked.forEach((x,i)=>top.append(h("li",{},h("button",{style:`--sc:${x.s.stage.color}`,onclick:()=>openSet(x.s.id)},
+    h("span",{class:"rank"},i+1),
+    h("span",{},h("div",{class:"artist"},x.s.artist),h("div",{class:"meta"},`${x.s.stage.name}, ${x.s.start}–${x.s.end}`)),
+    h("span",{class:"chips"},x.yes.slice(0,5).map(u=>chip(u)),x.yes.length>5?h("span",{class:"count"},`+${x.yes.length-5}`):null)))));
+  const box=$("#crew"); box.replaceChildren();
+  const ab=$("#adminBar"); ab.hidden=!adminKey;
+  $("#adminDate").textContent = EVENT.date ? `Event-Datum: ${new Date(EVENT.date+"T12:00").toLocaleDateString("de-DE",{weekday:"short",day:"2-digit",month:"2-digit",year:"numeric"})}.` : "Event-Datum fehlt in timetable.json, automatische Erinnerungen sind aus.";
+  for(const u of state.users){
+    const p=Object.values(picksOf(u.id)), y=p.filter(v=>v==="yes").length, m=p.filter(v=>v==="maybe").length, c=conflictsOf(u.id).size;
+    const self=u.id===me;
+    box.append(h("div",{class:`person${self?" self":""}`},chip(u,false,true),
+      h("div",{},h("div",{class:"name"},u.name+(self?" (du)":"")),
+        h("div",{class:"stats"},`${y} dabei, ${m} vielleicht`,c?h("span",{class:"bad"},`, ${c} Überschneidungen`):null,
+          (state.notify||[]).includes(u.id)?h("span",{title:"Erinnerungen aktiviert"}," 🔔"):null)),
+      h("div",{class:"actions"},
+        self?h("button",{class:"iconbtn",onclick:renameMe},"Umbenennen"):null,
+        adminKey?h("button",{class:"iconbtn","aria-label":`${u.name} entfernen`,onclick:()=>removeUser(u)},"Entfernen"):null)));
+  }
+}
+async function renameMe(){
+  const u=userById(me); const n=(prompt("Neuer Name:",u?.name||"")||"").trim().replace(/\s+/g," ").slice(0,24); if(!n) return;
+  queueOp({action:"rename",user:me,name:n}); toast(online?"Name geändert":"Name geändert – wird gesendet, sobald Netz da ist");
+}
+async function removeUser(u){
+  if(!confirm(`${u.name} und alle Einträge dieser Person entfernen?`)) return;
+  try{ await api({action:"delete",user:u.id,key:adminKey}); toast(`${u.name} entfernt`); if(u.id===me){ me=null; localStorage.removeItem("hive-user"); render(); } }
+  catch(e){ toast(e.message); if(/Admin/.test(e.message)){ adminKey=null; localStorage.removeItem("hive-admin"); render(); } }
+}
+
+/* ======== Anmeldung ======== */
+function openJoin(){
+  const d=$("#joinDlg"), err=h("p",{class:"err",role:"alert"}), inp=h("input",{type:"text",maxlength:"24",placeholder:"Dein Name",autocomplete:"given-name","aria-label":"Dein Name"});
+  const create=async()=>{
+    err.textContent="";
+    try{ const j=await api({action:"join",name:inp.value}); me=j.id; localStorage.setItem("hive-user",me); onMeChanged(); d.close(); render(); toast(`Willkommen, ${userById(me)?.name}!`); }
+    catch(e){ err.textContent=e.message; }
+  };
+  inp.addEventListener("keydown",e=>{ if(e.key==="Enter") create(); });
+  d.replaceChildren(...[
+    me&&userById(me)?h("button",{class:"close","aria-label":"Schließen",onclick:()=>d.close()},"×"):null,
+    h("div",{class:"dlg-head"},h("div",{class:"meta"},"HIVE Indoor Crew-Planer"),h("h3",{},"Wer bist du?")),
+    h("div",{class:"dlg-body"},
+      state.users.length?[h("p",{style:"margin:0"},"Schon dabei? Tippe auf deinen Namen."),
+        h("div",{class:"pick-list"},state.users.map(u=>h("button",{onclick:()=>{me=u.id;localStorage.setItem("hive-user",me); onMeChanged();d.close();render();}},chip(u),u.name)))]:null,
+      h("p",{style:"margin:0"},state.users.length?"Neu hier? Leg dich an:":"Leg dich als Erstes an:"),
+      h("div",{class:"field"},inp,h("button",{class:"primary",onclick:create},"Anlegen")), err)].filter(Boolean));
+  if(!d.open) d.showModal();
+  setTimeout(()=>{ if(!state.users.length) inp.focus(); },50);
+}
+$("#joinDlg").addEventListener("cancel",e=>{ if(!userById(me)) e.preventDefault(); });
+
+/* ======== Rendering & Navigation ======== */
+function go(v){
+  view=v; document.querySelectorAll(".tabs button").forEach(b=>b.toggleAttribute("aria-current",false));
+  document.querySelector(`.tabs button[data-view="${v}"]`).setAttribute("aria-current","page");
+  document.querySelectorAll(".view").forEach(s=>s.hidden=s.id!==`view-${v}`);
+  history.replaceState(null,"",`#${v}`); render(); window.scrollTo({top:0});
+}
+document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.view)));
+function render(){
+  const u=userById(me), mb=$("#meBtn");
+  if(state.rev>=0 && !u && !$("#joinDlg").open) openJoin();
+  mb.hidden=!u; if(u){ mb.replaceChildren(chip(u),u.name); }
+  renderStageTabs(); renderGrid();
+  if(view==="plan") renderPlan(); if(view==="crew") renderCrew();
+  if($("#setDlg").open && openSetId) openSet(openSetId,true);
+}
+$("#meBtn").addEventListener("click",openJoin);
+
+async function activateAdmin(){
+  const p=new URLSearchParams(location.search), k=p.get("admin"); if(!k) return;
+  p.delete("admin"); history.replaceState(null,"",location.pathname+(p.toString()?"?"+p:"")+location.hash);
+  try{ await api({action:"checkadmin",key:k}); adminKey=k; localStorage.setItem("hive-admin",k); toast("Admin-Modus aktiv"); render(); }
+  catch(e){ toast(e.message); }
+}
+document.querySelectorAll("#adminBar [data-kind]").forEach(b=>b.addEventListener("click",()=>adminTest(b.dataset.kind,b.dataset.target)));
+$("#adminOff").addEventListener("click",()=>{ adminKey=null; localStorage.removeItem("hive-admin"); toast("Admin-Modus beendet"); render(); });
+activateAdmin();
+document.body.dataset.stage = localStorage.getItem("hive-stage") || "tc";
+const start = location.hash.slice(1); if(["plan","crew"].includes(start)) go(start);
+/* ======== Start, Offline-Betrieb & Installation ======== */
+async function boot(){
+  try{ initTimetable(await (await fetch("timetable.json",{cache:"no-cache"})).json()); }
+  catch(e){ $("#grid").replaceChildren(h("p",{class:"hint",style:"padding:20px"},"Timetable konnte nicht geladen werden. Bitte einmal mit Internet öffnen.")); }
+  try{ const c=await kvGet("state"); if(c?.state){ server=norm(c.state); syncedAt=c.at; } }catch(e){}
+  try{ outbox=(await kvGet("outbox"))||[]; }catch(e){}
+  rebuild(); render(); renderSync();
+  initPush();
+  load();
+}
+boot();
+setInterval(()=>{ if(!document.hidden) load(); },8000);
+setInterval(()=>{ if(!online) renderSync(); },30000);
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden) load(); });
+window.addEventListener("online",()=>load());
+window.addEventListener("offline",()=>setOnline(false));
+
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+  navigator.serviceWorker.addEventListener("message",async e=>{
+    if(e.data?.type==="goto"){ go(e.data.view||"plan"); return; }
+    if(e.data?.type!=="synced") return;
+    try{ const c=await kvGet("state"); if(c?.state){ server=norm(c.state); syncedAt=c.at; } outbox=(await kvGet("outbox"))||[]; }catch(err){}
+    rebuild(); render(); setOnline(true);
+  });
+}
+navigator.storage?.persist?.().catch(()=>{});
+
+let installPrompt=null;
+window.addEventListener("beforeinstallprompt",e=>{ e.preventDefault(); installPrompt=e; $("#installBtn").hidden=false; });
+window.addEventListener("appinstalled",()=>{ $("#installBtn").hidden=true; installPrompt=null; toast("App installiert – sie funktioniert jetzt auch offline."); });
+if(isIOS && !standalone) $("#installBtn").hidden=false;
+$("#installBtn").addEventListener("click",async()=>{
+  if(installPrompt){ installPrompt.prompt(); await installPrompt.userChoice.catch(()=>{}); installPrompt=null; $("#installBtn").hidden=true; return; }
+  const d=$("#helpDlg");
+  const share=h("span",{class:"share-ico","aria-hidden":"true"}); share.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M6 11v9h12v-9"/></svg>';
+  d.replaceChildren(
+    h("button",{class:"close","aria-label":"Schließen",onclick:()=>d.close()},"×"),
+    h("div",{class:"dlg-head"},h("div",{class:"meta"},"iPhone & iPad"),h("h3",{},"Als App installieren")),
+    h("div",{class:"dlg-body"},
+      h("ol",{class:"steps"},
+        h("li",{},"Diese Seite in ",h("b",{},"Safari")," öffnen."),
+        h("li",{},"Unten auf das Teilen-Symbol ",share," tippen."),
+        h("li",{},"Nach unten scrollen und ",h("b",{},"„Zum Home-Bildschirm“")," wählen."),
+        h("li",{},"Oben rechts auf ",h("b",{},"„Hinzufügen“")," tippen.")),
+      h("p",{class:"hint",style:"margin:16px 0 0"},"Danach die App immer über das neue Icon öffnen. Dann funktioniert sie auch ohne Empfang und behält deine Daten dauerhaft.")));
+  d.showModal();
+});
+$("#helpDlg").addEventListener("click",e=>{ if(e.target.id==="helpDlg") e.target.close(); });
+</script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+# Laufzeitdaten der App (vom Server erzeugt)
+data/*
+!data/.htaccess
