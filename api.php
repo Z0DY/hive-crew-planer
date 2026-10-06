@@ -145,6 +145,7 @@ try {
   }
 } catch (ApiError $e) {
   flock($fp, LOCK_UN); fclose($fp);
+  if ($e->getCode() === 403) sleep(1);   // falscher Admin-Schlüssel: Durchprobieren ausbremsen (erst nach dem Entsperren)
   fail($e->getMessage(), $e->getCode() ?: 400);
 } catch (Exception $e) {
   flock($fp, LOCK_UN); fclose($fp);

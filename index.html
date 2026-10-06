@@ -39,7 +39,7 @@ button{font:inherit;color:inherit;cursor:pointer}
   background:repeating-conic-gradient(from 0deg at 50% 120%,rgba(35,35,42,.10) 0 1.2deg,transparent 1.2deg 4deg,rgba(215,20,26,.10) 4deg 4.6deg,transparent 4.6deg 9deg);
   pointer-events:none}
 .hero-inner{position:relative;max-width:1280px;margin:0 auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
-.logo{font-family:var(--display);font-size:clamp(40px,8vw,72px);line-height:.9;color:var(--red);margin:0;letter-spacing:.01em}
+.logo{font-family:var(--display);font-size:clamp(40px,8vw,72px);line-height:.9;color:var(--red);margin:0;letter-spacing:.01em;user-select:none;-webkit-user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
 .logo small{display:inline-block;font-family:var(--cond);font-weight:600;font-size:.32em;color:var(--red);border:2px solid var(--red);padding:0 .35em;vertical-align:.95em;margin-left:.2em;letter-spacing:.06em}
 .sub{margin:6px 0 0;font-family:var(--cond);font-weight:600;font-size:18px;color:var(--steel)}
 .me{display:flex;align-items:center;gap:8px;background:var(--paper);border:2px solid var(--ink);border-radius:999px;padding:5px 14px 5px 5px;font-weight:600}
@@ -659,12 +659,42 @@ function render(){
 }
 $("#meBtn").addEventListener("click",openJoin);
 
+async function enterAdmin(k){ await api({action:"checkadmin",key:k}); adminKey=k; localStorage.setItem("hive-admin",k); toast("Admin-Modus aktiv"); render(); }
 async function activateAdmin(){
   const p=new URLSearchParams(location.search), k=p.get("admin"); if(!k) return;
   p.delete("admin"); history.replaceState(null,"",location.pathname+(p.toString()?"?"+p:"")+location.hash);
-  try{ await api({action:"checkadmin",key:k}); adminKey=k; localStorage.setItem("hive-admin",k); toast("Admin-Modus aktiv"); render(); }
-  catch(e){ toast(e.message); }
+  try{ await enterAdmin(k); } catch(e){ toast(e.message); }
 }
+// Versteckter Zugang: 5x schnell aufs Logo tippen, dann Kennwort eingeben
+function openAdminLogin(){
+  const d=$("#helpDlg"), err=h("p",{class:"err",role:"alert"}),
+    inp=h("input",{type:"password",placeholder:"Admin-Kennwort",autocomplete:"off","aria-label":"Admin-Kennwort"}),
+    btn=h("button",{class:"primary"},"Anmelden");
+  const login=async()=>{
+    if(!inp.value) return;
+    err.textContent=""; btn.disabled=true;
+    try{ await enterAdmin(inp.value); d.close(); }
+    catch(e){ err.textContent=e.message; inp.select(); }
+    finally{ btn.disabled=false; }
+  };
+  btn.addEventListener("click",login);
+  inp.addEventListener("keydown",e=>{ if(e.key==="Enter") login(); });
+  d.replaceChildren(
+    h("button",{class:"close","aria-label":"Schließen",onclick:()=>d.close()},"×"),
+    h("div",{class:"dlg-head"},h("div",{class:"meta"},"Crew-Planer"),h("h3",{},"Admin-Modus")),
+    h("div",{class:"dlg-body"},h("div",{class:"field"},inp,btn),err));
+  d.showModal();
+  setTimeout(()=>inp.focus(),50);
+}
+let logoTaps=0, logoTimer=null;
+$("#logo").addEventListener("click",()=>{
+  clearTimeout(logoTimer); logoTimer=setTimeout(()=>logoTaps=0,1500);   // Pause > 1,5 s fängt von vorn an
+  if(++logoTaps<5) return;
+  logoTaps=0;
+  if(adminKey) return toast("Admin-Modus ist schon aktiv");
+  if(!online) return toast("Dafür brauchst du gerade Netz.");
+  openAdminLogin();
+});
 document.querySelectorAll("#adminBar [data-kind]").forEach(b=>b.addEventListener("click",()=>adminTest(b.dataset.kind,b.dataset.target)));
 $("#adminOff").addEventListener("click",()=>{ adminKey=null; localStorage.removeItem("hive-admin"); toast("Admin-Modus beendet"); render(); });
 activateAdmin();

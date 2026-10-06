@@ -67,7 +67,7 @@ Nur `timetable.json` anpassen (Name, Ort, Datum, Stages, Zeiten), in `sw.js` die
 
 ## Admin-Zugang (Personen entfernen)
 1. In `config.php` das Wort `HIER-GEHEIMES-WORT-EINTRAGEN` durch ein eigenes geheimes Wort ersetzen (mind. 8 Zeichen, Buchstaben, Zahlen, -).
-2. Einmal `https://deine-domain/?admin=DEIN-WORT` öffnen. Das Gerät merkt sich den Admin-Modus.
+2. 5x schnell auf das HIVE-Logo tippen und das Wort eingeben – oder einmal `https://deine-domain/?admin=DEIN-WORT` öffnen. Das Gerät merkt sich den Admin-Modus. Falsche Eingaben werden vom Server um 1 Sekunde gebremst.
 3. Unter „Crew“ erscheinen jetzt die Buttons „Entfernen“. Alle anderen sehen sie nicht und der Server lehnt Löschungen ohne Schlüssel ab.
 4. „Admin-Modus beenden“ entfernt den Schlüssel wieder vom Gerät.
 
