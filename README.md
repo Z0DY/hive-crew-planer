@@ -27,13 +27,18 @@
 - Wichtig vor dem Festival: Die App einmal mit Netz öffnen, damit der aktuelle Stand gespeichert ist.
 
 ## App aktualisieren
-**Per Skript (empfohlen):** In `deploy.config.psd1` einmal Server, Benutzer, Pfad und URL eintragen, dann:
+**Per Skript (empfohlen):** In `deploy.config.psd1` einmal Server, Benutzer, Pfad und URL für `test` und `prod` eintragen, dann:
 ```
-.\deploy.ps1          # Ziel "test"
+.\deploy.ps1          # Test-Server
+.\deploy.ps1 prod     # Produktiv-Server (mit Rückfrage; -Yes überspringt sie)
 ```
-oder in VS Code `Strg+Umschalt+B` („Deploy: hive-test“). Das Skript
-- lädt den aktuellen Stand hoch (auch nicht committete Änderungen an bekannten Dateien),
-- lässt `data/` und eine vorhandene `config.php` auf dem Server unangetastet,
+oder in VS Code `Strg+Umschalt+B` („Deploy: Test“) bzw. „Terminal > Task ausführen > Deploy: Produktiv“.
+
+- **Test** lädt den aktuellen Stand hoch, auch nicht committete Änderungen an bekannten Dateien.
+- **Produktiv** geht nur mit sauberem, committetem Stand und taggt ihn danach als `prod-<Datum>` (`git tag -l "prod-*"` zeigt, was wann live ging).
+
+Das Skript
+- lässt `data/` und eine vorhandene `config.php` auf dem Server unangetastet (als root: `data/` gehört danach `www-data`),
 - setzt `VERSION` in `sw.js` automatisch (z. B. `hive-20261006-2215-0f0f2f4`),
 - prüft am Ende, ob die neue Version online ist.
 

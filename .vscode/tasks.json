@@ -2,11 +2,19 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Deploy: hive-test",
+      "label": "Deploy: Test",
       "type": "shell",
       "command": "powershell -NoProfile -ExecutionPolicy Bypass -File ./deploy.ps1 test",
       "problemMatcher": [],
       "group": { "kind": "build", "isDefault": true }
+    },
+    {
+      "label": "Deploy: Produktiv",
+      "type": "shell",
+      "command": "powershell -NoProfile -ExecutionPolicy Bypass -File ./deploy.ps1 prod",
+      "problemMatcher": [],
+      "group": "build",
+      "presentation": { "focus": true }
     }
   ]
 }
