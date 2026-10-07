@@ -48,6 +48,46 @@ function chat_delta($c, $since, $epoch) {
   $msgs = array_filter($c['msgs'], fn($m) => $full ? empty($m['del']) : $m['seq'] > $since);
   return ['epoch' => $c['epoch'], 'seq' => $c['seq'], 'full' => $full, 'msgs' => array_values($msgs)];
 }
+// ---------- Kalender-Export (.ics) für "Mein Plan" ----------
+// Acts mit ✔ bekommen einen Wecker (notify_minutes vorher) – der klingelt auch ohne Empfang. "Vielleicht" ohne Wecker.
+function ics_text($s) { return str_replace(['\\', ';', ',', "\n"], ['\\\\', '\\;', '\\,', '\\n'], (string)$s); }
+function ics_fold($line) {   // Zeilen max. 75 Byte, nicht mitten in einem UTF-8-Zeichen trennen
+  $out = '';
+  while (strlen($line) > 74) {
+    $cut = 74; while ($cut > 1 && (ord($line[$cut]) & 0xC0) === 0x80) $cut--;
+    $out .= substr($line, 0, $cut) . "\r\n "; $line = substr($line, $cut);
+  }
+  return $out . $line;
+}
+function ics_calendar($state, $uid) {
+  $tt = tt_load();
+  if (!$tt || empty($tt['date'])) return null;
+  $picks = $state['picks'][$uid] ?? [];
+  $minutes = (int)(hive_config()['notify_minutes'] ?? 15);
+  $names = array_column($state['users'], 'name', 'id');
+  $stamp = gmdate('Ymd\THis\Z');
+  $L = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//HIVE Crew-Planer//DE', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+        'X-WR-CALNAME:' . ics_text($tt['title'] ?? 'Event'),
+        'REFRESH-INTERVAL;VALUE=DURATION:PT1H', 'X-PUBLISHED-TTL:PT1H'];   // als Abo (iPhone): stündlich aktualisieren
+  foreach (tt_sets($tt) as $id => $s) {
+    $p = $picks[$id] ?? null;
+    if (!$p || !$s['ts']) continue;
+    $dur = strtotime('2000-01-01 ' . $s['end']) - strtotime('2000-01-01 ' . $s['start']);
+    if ($dur <= 0) $dur += 86400;   // über Mitternacht
+    $with = [];
+    foreach ($state['picks'] as $other => $pp) if ($other !== $uid && ($pp[$id] ?? null) === 'yes' && isset($names[$other])) $with[] = $names[$other];
+    array_push($L, 'BEGIN:VEVENT', "UID:$uid-$id@hive-crew-planer", "DTSTAMP:$stamp",
+      'DTSTART:' . gmdate('Ymd\THis\Z', $s['ts']), 'DTEND:' . gmdate('Ymd\THis\Z', $s['ts'] + $dur),
+      'SUMMARY:' . ics_text(($p === 'maybe' ? '(vielleicht) ' : '') . $s['artist']),
+      'LOCATION:' . ics_text($s['stage'] . (!empty($tt['location']) ? ', ' . $tt['location'] : '')),
+      'DESCRIPTION:' . ics_text($with ? 'Mit: ' . implode(', ', $with) : 'Bisher gehst du allein hin'));
+    if ($p === 'yes') array_push($L, 'BEGIN:VALARM', 'ACTION:DISPLAY', 'DESCRIPTION:' . ics_text($s['artist']), "TRIGGER:-PT{$minutes}M", 'END:VALARM');
+    $L[] = 'END:VEVENT';
+  }
+  $L[] = 'END:VCALENDAR';
+  return implode("\r\n", array_map('ics_fold', $L)) . "\r\n";
+}
+
 // Fotos: data/photos/<id>.jpg (max. 1280 px) und <id>_t.jpg (Vorschau). Das Handy verkleinert vorher.
 const PHOTO_KEEP = 150;
 function photo_path($id, $thumb = false) { return __DIR__ . '/data/photos/' . $id . ($thumb ? '_t' : '') . '.jpg'; }
@@ -65,6 +105,8 @@ function clean_text($s) {
 }
 // Wer wird mit @Name erwähnt? Längere Namen zuerst, damit "@Max Müller" nicht zusätzlich "Max" trifft.
 function chat_mentions($state, $text, $uid) {
+  if (preg_match('/@alle(?![\p{L}\p{N}])/iu', $text))   // @alle: die ganze Crew außer dem Absender
+    return array_values(array_filter(array_column($state['users'], 'id'), fn($id) => $id !== $uid));
   $users = $state['users'];
   usort($users, fn($a, $b) => mb_strlen($b['name']) - mb_strlen($a['name']));
   $at = [];
@@ -166,6 +208,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['vapid'])) {
 }
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
   flock($fp, LOCK_UN); fclose($fp);
+  if (isset($_GET['ics'])) {
+    $uid = preg_replace('/[^a-z0-9]/', '', (string)$_GET['ics']);
+    if (!user_exists($state, $uid)) fail('Person nicht gefunden.', 404);
+    $ics = ics_calendar($state, $uid);
+    if ($ics === null) fail('In timetable.json fehlt das Event-Datum.', 404);
+    header('Content-Type: text/calendar; charset=utf-8');
+    header('Content-Disposition: attachment; filename="hive-plan.ics"');
+    echo $ics; exit;
+  }
   $out = isset($_GET['rev']) && (int)$_GET['rev'] === (int)$state['rev'] ? ['unchanged' => true, 'rev' => $state['rev']] : $state + ['serverTime' => time()];
   if (isset($_GET['chat'])) $out['chat'] = chat_delta(chat_read(), (int)$_GET['chat'], (string)($_GET['epoch'] ?? ''));
   echo json_encode($out, JSON_UNESCAPED_UNICODE); exit;

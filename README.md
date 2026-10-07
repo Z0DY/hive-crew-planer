@@ -64,11 +64,18 @@ Die Geräte laden die neue Version beim nächsten Öffnen mit Netz im Hintergrun
 
 ## Crew-Chat
 - Ein gemeinsamer Chat für alle unter „Chat“. Die Zahl am Tab zeigt ungelesene Nachrichten (gelb = du wurdest erwähnt).
-- `@Name` erwähnt jemanden. Wer unter „Mein Plan“ die Erinnerungen aktiviert hat, bekommt dann eine Push-Nachricht. Andere Chat-Nachrichten lösen keine Push-Nachricht aus.
+- `@Name` erwähnt jemanden, `@alle` die ganze Crew. Wer unter „Mein Plan“ die Erinnerungen aktiviert hat, bekommt dann eine Push-Nachricht. Andere Chat-Nachrichten lösen keine Push-Nachricht aus.
 - Ohne Netz geschriebene Nachrichten werden gesendet, sobald wieder Verbindung da ist.
 - Eigene Nachrichten kann jeder löschen, im Admin-Modus alle.
 - Fotos: Kamera-Button links neben dem Eingabefeld. Das Handy verkleinert das Foto vor dem Senden (max. 1280 px, ca. 150–300 KB) und entfernt dabei Standort- und Kameradaten. Im Chat erscheint eine kleine Vorschau, antippen zeigt es groß.
 - Gespeichert werden die letzten 300 Nachrichten in `data/chat.json` und höchstens 150 Fotos in `data/photos/` (ältere werden automatisch gelöscht). Chat leeren: `data/chat.json` und `data/photos/` löschen.
+
+## Während des Events
+- **Jetzt-Übersicht:** Ab 1 Stunde vor Beginn zeigt die Timetable oben pro Stage, was gerade läuft und was als Nächstes kommt, mit der Crew laut Plan. Eine rote Linie markiert die aktuelle Uhrzeit, die Timetable öffnet dort. Vergangene Acts sind blass, laufende als LIVE markiert.
+- **Testen vor dem Event:** `https://deine-domain/?jetzt=21:15` tut so, als wäre es am Event-Tag 21:15 Uhr (gilt bis zum Schließen des Tabs). `?jetzt=aus` beendet die Testzeit.
+- **Überschneidungen:** Bei zwei zugesagten Acts gleichzeitig schlägt der Act-Dialog eine Aufteilung vor (z. B. erste Hälfte hier, dann Wechsel), mit wem man jeweils dort ist.
+- **Kalender:** Unter „Mein Plan“ übernimmt „In Kalender übernehmen“ alle Acts als Termine, mit Wecker vor den Acts mit ✔ (Vorlauf wie `notify_minutes`). Der Wecker kommt vom Handy und klingelt auch ohne Empfang. Auf dem iPhone wird der Plan als Kalender-Abo (`webcal://`) eingebunden, weil Web-Apps dort keine Kalender-Dateien öffnen können: beim Abonnieren „Hinweise entfernen“ ausschalten, Änderungen kommen dann automatisch nach. Android/PC laden eine `.ics`-Datei.
+- **Dunkles Design:** folgt automatisch der Handy-Einstellung, im Profil (oben rechts) auch fest auf Hell oder Dunkel stellbar.
 
 ## Neues Event
 Nur `timetable.json` anpassen (Name, Ort, Datum, Stages, Zeiten), in `sw.js` die `VERSION` hochzählen und für einen frischen Start `data/state.json`, `data/chat.json` und `data/photos/` löschen. Die Erinnerungs-Anmeldungen in `data/push.json` bleiben dabei erhalten.
