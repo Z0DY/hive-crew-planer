@@ -12,6 +12,8 @@ function is_admin($key) {
 class ApiError extends Exception {}
 function fail($msg, $code = 400) { http_response_code($code); echo json_encode(['error' => $msg], JSON_UNESCAPED_UNICODE); exit; }
 function clean_name($s) { return mb_substr(trim(preg_replace('/\s+/u', ' ', (string)$s)), 0, 24); }
+// Reihenfolge, in der neue Personen Farben bekommen (Index in USER_COLORS, index.html): erst die unterschiedlichsten
+const COLOR_ORDER = [0, 11, 5, 1, 15, 9, 19, 24, 3, 29, 12, 7, 18, 2, 14, 21, 4, 10, 23, 27, 17, 6, 13, 22, 26, 8, 20, 16, 25, 28];
 function user_exists($state, $uid) { return in_array($uid, array_column($state['users'], 'id'), true); }
 
 // ---------- Chat (eigene Datei data/chat.json, damit Nachrichten nicht den Plan-Stand aufblähen) ----------
@@ -46,6 +48,17 @@ function chat_delta($c, $since, $epoch) {
   $msgs = array_filter($c['msgs'], fn($m) => $full ? empty($m['del']) : $m['seq'] > $since);
   return ['epoch' => $c['epoch'], 'seq' => $c['seq'], 'full' => $full, 'msgs' => array_values($msgs)];
 }
+// Fotos: data/photos/<id>.jpg (max. 1280 px) und <id>_t.jpg (Vorschau). Das Handy verkleinert vorher.
+const PHOTO_KEEP = 150;
+function photo_path($id, $thumb = false) { return __DIR__ . '/data/photos/' . $id . ($thumb ? '_t' : '') . '.jpg'; }
+function photo_delete($id) { @unlink(photo_path($id)); @unlink(photo_path($id, true)); }
+function photo_decode($b64, $max) {   // nur echte JPEG-Bilder annehmen
+  $bin = base64_decode((string)$b64, true);
+  if ($bin === false || strlen($bin) > $max || substr($bin, 0, 3) !== "\xFF\xD8\xFF") return null;
+  $info = @getimagesizefromstring($bin);
+  if (!$info || $info[2] !== IMAGETYPE_JPEG || $info[0] > 4096 || $info[1] > 4096) return null;
+  return [$bin, $info[0], $info[1]];
+}
 function clean_text($s) {
   $s = preg_replace('/[^\P{Cc}\n]/u', '', str_replace(["\r\n", "\r"], "\n", (string)$s)) ?? '';   // Steuerzeichen raus, Zeilenumbrüche bleiben
   return mb_substr(preg_replace("/\n{3,}/", "\n\n", trim($s)), 0, 500);
@@ -72,11 +85,30 @@ function chat_say(&$c, $state, $in) {
   if (strlen($id) < 6) throw new ApiError('Nachricht ohne Kennung.');
   foreach ($c['msgs'] as $m) if ($m['id'] === $id) return null;   // schon angekommen (Warteschlange erneut gesendet)
   $text = clean_text($in['text'] ?? '');
-  if ($text === '') throw new ApiError('Leere Nachricht.');
+  $photo = null;
+  if (!empty($in['photo'])) {
+    $full = photo_decode($in['photo'], 1500000); $thumb = photo_decode($in['thumb'] ?? '', 200000);
+    if (!$full || !$thumb) throw new ApiError('Foto ungültig.');
+    if (!is_dir(dirname(photo_path($id)))) @mkdir(dirname(photo_path($id)), 0775, true);
+    if (@file_put_contents(photo_path($id), $full[0]) === false || @file_put_contents(photo_path($id, true), $thumb[0]) === false)
+      throw new Exception('data/photos nicht beschreibbar');
+    $photo = [$full[1], $full[2]];
+  }
+  if ($text === '' && !$photo) throw new ApiError('Leere Nachricht.');
   $msg = ['id' => $id, 'seq' => ++$c['seq'], 'user' => $uid, 'name' => $user['name'], 'text' => $text, 'ts' => time()];
+  if ($photo) $msg['photo'] = $photo;
   if ($at = chat_mentions($state, $text, $uid)) $msg['at'] = $at;
   $c['msgs'][] = $msg;
-  while (count($c['msgs']) > CHAT_KEEP) { $old = array_shift($c['msgs']); $c['base'] = max($c['base'], $old['seq']); }
+  while (count($c['msgs']) > CHAT_KEEP) {
+    $old = array_shift($c['msgs']); $c['base'] = max($c['base'], $old['seq']);
+    if (!empty($old['photo'])) photo_delete($old['id']);
+  }
+  // Zu viele Fotos: die ältesten entfernen, die Nachricht bleibt mit Hinweis stehen
+  $withPhoto = array_keys(array_filter($c['msgs'], fn($m) => !empty($m['photo'])));
+  foreach (array_slice($withPhoto, 0, max(0, count($withPhoto) - PHOTO_KEEP)) as $k) {
+    photo_delete($c['msgs'][$k]['id']);
+    unset($c['msgs'][$k]['photo']); $c['msgs'][$k]['gone'] = 1; $c['msgs'][$k]['seq'] = ++$c['seq'];
+  }
   return $msg;
 }
 function chat_unsay(&$c, $in) {
@@ -85,13 +117,27 @@ function chat_unsay(&$c, $in) {
   foreach ($c['msgs'] as &$m) {
     if ($m['id'] !== $id || !empty($m['del'])) continue;
     if ($m['user'] !== $uid && !is_admin($in['key'] ?? '')) throw new ApiError('Du kannst nur deine eigenen Nachrichten löschen.', 403);
+    if (!empty($m['photo'])) photo_delete($id);
     $m = ['id' => $id, 'seq' => ++$c['seq'], 'del' => 1];
     return;
   }
 }
 function chat_push_message($m) {
   $text = mb_strlen($m['text']) > 160 ? mb_substr($m['text'], 0, 159) . '…' : $m['text'];
+  if (!empty($m['photo'])) $text = '📷 Foto' . ($text !== '' ? ': ' . $text : '');
   return ['title' => '💬 ' . $m['name'] . ' im Crew-Chat', 'body' => $text, 'tag' => 'chat', 'url' => './#chat'];
+}
+
+// Foto ausliefern (ohne den Plan-Speicher zu sperren). Name = Nachrichten-ID, ändert sich nie -> lange cachen.
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['photo'])) {
+  $pid = preg_replace('/[^a-z0-9]/', '', (string)$_GET['photo']);
+  $f = photo_path($pid, isset($_GET['thumb']));
+  if ($pid === '' || !is_file($f)) { http_response_code(404); exit; }
+  header('Content-Type: image/jpeg');
+  header('Cache-Control: public, max-age=31536000, immutable');
+  header('X-Content-Type-Options: nosniff');
+  header('Content-Length: ' . filesize($f));
+  readfile($f); exit;
 }
 
 $file = __DIR__ . '/data/state.json';
@@ -103,6 +149,14 @@ $raw = stream_get_contents($fp);
 $state = $raw ? json_decode($raw, true) : null;
 if (!is_array($state)) $state = ['rev' => 0, 'users' => [], 'picks' => []];
 if (!is_array($state['picks'])) $state['picks'] = [];
+// Einmalig: Farbnummern aus der alten 12er-Palette auf die neue Reihenfolge umstellen (sonst lauter Nachbarfarben)
+if (($state['palette'] ?? 0) < 2) {
+  foreach ($state['users'] as &$u) $u['color'] = COLOR_ORDER[($u['color'] ?? 0) % count(COLOR_ORDER)];
+  unset($u);
+  $state['palette'] = 2; $state['rev']++;
+  $out = $state; if (empty($out['picks'])) $out['picks'] = new stdClass();
+  ftruncate($fp, 0); rewind($fp); fwrite($fp, json_encode($out, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)); fflush($fp);
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['vapid'])) {
   flock($fp, LOCK_UN); fclose($fp);
@@ -126,14 +180,22 @@ function apply_op(&$state, $in) {
       foreach ($state['users'] as $u) if (mb_strtolower($u['name']) === mb_strtolower($name)) throw new ApiError('Diesen Namen gibt es schon – tippe ihn in der Liste an.');
       if (count($state['users']) >= 40) throw new ApiError('Maximal 40 Personen.');
       $id = bin2hex(random_bytes(5));
-      $used = array_column($state['users'], 'color'); $color = 0;
-      while (in_array($color, $used, true) && $color < 40) $color++;
+      // erste freie Farbe in gestreuter Reihenfolge; sind alle 30 vergeben, die am seltensten genutzte
+      $use = array_count_values(array_column($state['users'], 'color'));
+      $color = COLOR_ORDER[0];
+      foreach (COLOR_ORDER as $c) if (($use[$c] ?? 0) < ($use[$color] ?? 0)) $color = $c;
       $state['users'][] = ['id' => $id, 'name' => $name, 'color' => $color];
       return ['id' => $id];
     case 'rename':
       $name = clean_name($in['name'] ?? '');
       if ($name === '') throw new ApiError('Bitte einen Namen eingeben.');
       foreach ($state['users'] as &$u) if ($u['id'] === $uid) { $u['name'] = $name; return ['ok' => true]; }
+      throw new ApiError('Person nicht gefunden.', 404);
+    case 'color':   // eigene Farbe wählen (0–29, siehe USER_COLORS in index.html), jede Farbe gibt es nur einmal
+      $color = (int)($in['color'] ?? -1);
+      if ($color < 0 || $color >= count(COLOR_ORDER)) throw new ApiError('Unbekannte Farbe.');
+      foreach ($state['users'] as $u) if ($u['id'] !== $uid && ($u['color'] ?? null) === $color) throw new ApiError('Diese Farbe hat schon ' . $u['name'] . '.', 409);
+      foreach ($state['users'] as &$u) if ($u['id'] === $uid) { $u['color'] = $color; return ['ok' => true]; }
       throw new ApiError('Person nicht gefunden.', 404);
     case 'delete':
       if (!is_admin($in['key'] ?? '')) throw new ApiError('Nur der Admin kann Personen entfernen.', 403);

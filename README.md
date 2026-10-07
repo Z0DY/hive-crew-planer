@@ -67,10 +67,11 @@ Die Geräte laden die neue Version beim nächsten Öffnen mit Netz im Hintergrun
 - `@Name` erwähnt jemanden. Wer unter „Mein Plan“ die Erinnerungen aktiviert hat, bekommt dann eine Push-Nachricht. Andere Chat-Nachrichten lösen keine Push-Nachricht aus.
 - Ohne Netz geschriebene Nachrichten werden gesendet, sobald wieder Verbindung da ist.
 - Eigene Nachrichten kann jeder löschen, im Admin-Modus alle.
-- Gespeichert werden die letzten 300 Nachrichten in `data/chat.json`. Chat leeren: diese Datei löschen.
+- Fotos: Kamera-Button links neben dem Eingabefeld. Das Handy verkleinert das Foto vor dem Senden (max. 1280 px, ca. 150–300 KB) und entfernt dabei Standort- und Kameradaten. Im Chat erscheint eine kleine Vorschau, antippen zeigt es groß.
+- Gespeichert werden die letzten 300 Nachrichten in `data/chat.json` und höchstens 150 Fotos in `data/photos/` (ältere werden automatisch gelöscht). Chat leeren: `data/chat.json` und `data/photos/` löschen.
 
 ## Neues Event
-Nur `timetable.json` anpassen (Name, Ort, Datum, Stages, Zeiten), in `sw.js` die `VERSION` hochzählen und für einen frischen Start `data/state.json` und `data/chat.json` löschen. Die Erinnerungs-Anmeldungen in `data/push.json` bleiben dabei erhalten.
+Nur `timetable.json` anpassen (Name, Ort, Datum, Stages, Zeiten), in `sw.js` die `VERSION` hochzählen und für einen frischen Start `data/state.json`, `data/chat.json` und `data/photos/` löschen. Die Erinnerungs-Anmeldungen in `data/push.json` bleiben dabei erhalten.
 
 ## Admin-Zugang (Personen entfernen)
 1. In `config.php` das Wort `HIER-GEHEIMES-WORT-EINTRAGEN` durch ein eigenes geheimes Wort ersetzen (mind. 8 Zeichen, Buchstaben, Zahlen, -).
@@ -86,4 +87,5 @@ Nur `timetable.json` anpassen (Name, Ort, Datum, Stages, Zeiten), in `sw.js` die
 ## Hinweise
 - Wer den Link kennt, kann alles sehen und Einträge bearbeiten. Personen entfernen kann nur der Admin.
 - Jedes Gerät merkt sich, wer man ist. Auf einem neuen Gerät einfach den eigenen Namen antippen.
+- Eigene Farbe ändern: oben rechts aufs Profil tippen. 30 Farben, jede gibt es nur einmal (ab der 31. Person werden Farben doppelt vergeben).
 - Die Seite aktualisiert sich alle 9 Sekunden automatisch, bei offenem Chat alle 3 Sekunden.

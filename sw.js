@@ -57,15 +57,20 @@ const kvGet = k => kv("readonly", (st, set) => { const r = st.get(k); r.onsucces
 const kvPut = (k, v) => kv("readwrite", st => { st.put(v, k); });
 
 async function flushOutbox() {
-  const outbox = (await kvGet("outbox")) || [];
-  if (!outbox.length) return;
-  const r = await fetch("api.php", { method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "batch", ops: outbox }) });
-  if (!r.ok) throw new Error("sync failed");
-  const j = await r.json();
-  const sent = new Set(outbox.map(o => o.id));
-  const rest = ((await kvGet("outbox")) || []).filter(o => !sent.has(o.id));   // inzwischen neu hinzugekommene behalten
-  await kvPut("outbox", rest);
+  let outbox = (await kvGet("outbox")) || [], j = null;
+  while (outbox.length) {
+    // Fotos machen Anfragen groß: höchstens ca. 3 MB pro Anfrage (wie flush() in index.html)
+    const ops = []; let size = 0;
+    for (const o of outbox) { const s = JSON.stringify(o).length; if (ops.length && size + s > 3e6) break; ops.push(o); size += s; }
+    const r = await fetch("api.php", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "batch", ops }) });
+    if (!r.ok) throw new Error("sync failed");
+    j = await r.json();
+    const sent = new Set(ops.map(o => o.id));
+    outbox = ((await kvGet("outbox")) || []).filter(o => !sent.has(o.id));   // inzwischen neu hinzugekommene behalten
+    await kvPut("outbox", outbox);
+  }
+  if (!j) return;
   if (j.state) await kvPut("state", { state: j.state, at: Date.now() });
   const clients = await self.clients.matchAll();
   clients.forEach(c => c.postMessage({ type: "synced" }));
