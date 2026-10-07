@@ -60,6 +60,7 @@ mkdir -p '$path/data'
 cd '$path'
 if [ -f config.php ]; then tar -xzf '$remoteTmp' --no-same-owner --exclude=config.php; else tar -xzf '$remoteTmp' --no-same-owner; echo 'config.php neu angelegt - Admin-Schluessel dort eintragen!'; fi
 sed -i 's/^const VERSION = .*/const VERSION = "$version";/' sw.js
+sed -i 's/^const APP_VERSION = .*/const APP_VERSION = "$version";/' index.html
 if [ "`$(id -u)" = 0 ] && id www-data >/dev/null 2>&1; then chown -R www-data:www-data data; fi
 rm -f '$remoteTmp'
 "@ -replace "`r", ""

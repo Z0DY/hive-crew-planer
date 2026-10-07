@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#D7141A">
 <title>HIVE Indoor – Crew-Planer</title>
-<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="icon" href="app-icons/icon-192.png" type="image/png">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="app-icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="HIVE Crew">
@@ -131,6 +131,40 @@ h2{font-family:var(--display);font-weight:400;font-size:30px;margin:8px 0 4px;le
 .top .artist{font-family:var(--display);font-size:19px;line-height:1.1}
 .top .meta{font-family:var(--cond);font-weight:600;color:var(--steel);font-size:15px}
 
+/* ---------- Chat ---------- */
+.tabs .badge{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;margin-left:4px;border-radius:999px;background:#fff;color:var(--ink);font-size:13px;line-height:1;vertical-align:2px}
+.tabs .badge.at{background:#F2B705}
+.chat{display:flex;flex-direction:column;max-width:720px;padding-bottom:8px}
+.chat-day{align-self:center;font-family:var(--cond);font-weight:700;color:var(--steel);font-size:14px;margin:14px 0 2px}
+.msg{display:flex;gap:8px;align-items:flex-start;margin-top:10px}
+.msg.cont{margin-top:3px}
+.msg.cont>.chip{visibility:hidden;height:0}
+.msg.mine{justify-content:flex-end}
+.bubble{max-width:min(82%,540px);background:var(--paper);border-left:4px solid var(--uc);border-radius:4px 14px 14px 14px;padding:6px 12px 4px;box-shadow:0 1px 0 var(--line)}
+.msg.cont .bubble{border-radius:4px 14px 14px 4px}
+.msg.mine .bubble{background:var(--ink);color:#fff;border-left:0;border-radius:14px 4px 14px 14px}
+.msg.mine.cont .bubble{border-radius:14px 4px 4px 14px}
+.msg.at-me .bubble{box-shadow:inset 0 0 0 2px #F2B705}
+.msg.pending .bubble{opacity:.6}
+.mname{font-family:var(--cond);font-weight:700;font-size:15px;color:var(--uc)}
+.bubble .text{white-space:pre-wrap;overflow-wrap:anywhere}
+.bubble .meta{display:flex;justify-content:flex-end;gap:10px;font-size:12px;color:var(--steel);margin-top:1px}
+.msg.mine .meta{color:#B9BCC2}
+.bubble .del{border:0;background:none;padding:0;font-size:12px;color:inherit;text-decoration:underline}
+.mention{font-weight:700;color:var(--red)}
+.msg.mine .mention{color:#FF9A9D}
+.mention.me{background:#FFF1B8;color:var(--ink);border-radius:4px;padding:0 3px}
+.composer{position:sticky;bottom:calc(57px + var(--safe-b));z-index:10;max-width:720px;background:var(--concrete);padding:8px 0}
+body.has-sync .composer{bottom:calc(98px + var(--safe-b))}
+@media(min-width:900px){.composer,body.has-sync .composer{bottom:0}}
+.composer-row{display:flex;gap:8px;align-items:flex-end}
+.composer textarea{flex:1;min-width:0;font:inherit;font-size:17px;padding:10px 14px;border:2px solid var(--line);border-radius:18px;resize:none;max-height:140px;background:var(--paper)}
+.composer textarea:focus{border-color:var(--ink);outline:none}
+.composer .primary{border-radius:18px}
+.mention-pick{display:flex;gap:6px;overflow-x:auto;padding:0 0 8px;scrollbar-width:none}
+.mention-pick button{flex:none;display:flex;align-items:center;gap:6px;border:2px solid var(--line);background:var(--paper);border-radius:999px;padding:3px 12px 3px 3px;font-weight:600}
+.linkbtn{border:0;background:none;padding:0;color:var(--red-dark);font-weight:600;text-decoration:underline}
+
 /* ---------- Dialoge ---------- */
 dialog{border:0;padding:0;border-radius:14px;max-width:min(520px,calc(100vw - 24px));width:100%;color:var(--ink);background:var(--paper);box-shadow:0 30px 80px rgba(0,0,0,.35)}
 dialog::backdrop{background:rgba(20,20,26,.55)}
@@ -170,6 +204,9 @@ dialog::backdrop{background:rgba(20,20,26,.55)}
 .notify-card .ntext{flex:1;min-width:200px;font-weight:600}
 .notify-card .diag{color:var(--steel);font-weight:500;font-size:13px;margin-top:4px}
 .notify-card .warn{color:var(--red-dark);font-weight:600;font-size:14px;margin-top:4px}
+.version{font-weight:500;font-size:14px;color:var(--steel);display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+.version code{font-size:13px}
+.version .new{color:var(--red-dark);font-weight:600}
 .adminbar{display:flex;flex-direction:column;align-items:flex-start;gap:10px;background:var(--paper);border-left:6px solid var(--ink);border-radius:4px;padding:10px 12px;margin-bottom:10px;font-weight:600}
 .sync{position:sticky;top:0;z-index:15;display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--ink);color:#fff;padding:8px 14px;font-size:15px}
 .sync .dot{width:10px;height:10px;border-radius:50%;background:#F2B705;flex:none}
@@ -206,6 +243,7 @@ dialog::backdrop{background:rgba(20,20,26,.55)}
   <button data-view="timetable" aria-current="page">Timetable</button>
   <button data-view="plan">Mein Plan</button>
   <button data-view="crew">Crew</button>
+  <button data-view="chat">Chat<span class="badge" id="chatBadge" hidden></span></button>
 </nav>
 
 <main>
@@ -230,6 +268,7 @@ dialog::backdrop{background:rgba(20,20,26,.55)}
     <p class="hint">Rote Zahl = Acts, die sich bei dieser Person zeitlich überschneiden.</p>
     <div class="adminbar" id="adminBar" hidden>
       <div><b>Admin-Modus aktiv.</b> Du kannst Personen entfernen und Erinnerungen testen. <span id="adminDate"></span></div>
+      <div class="version" id="adminVersion"></div>
       <div class="admin-actions">
         <button class="iconbtn" data-kind="simple" data-target="me">Test an mich</button>
         <button class="iconbtn" data-kind="reminder" data-target="me">Erinnerung simulieren</button>
@@ -239,6 +278,19 @@ dialog::backdrop{background:rgba(20,20,26,.55)}
     </div>
     <div class="crew-grid" id="crew"></div>
   </section>
+
+  <section class="view" id="view-chat" hidden>
+    <h2>Crew-Chat</h2>
+    <p class="hint" id="chatHint"></p>
+    <div class="chat" id="chatList"></div>
+    <form class="composer" id="composer">
+      <div class="mention-pick" id="mentionPick" hidden></div>
+      <div class="composer-row">
+        <textarea id="chatInput" rows="1" maxlength="500" placeholder="Nachricht – @Name erwähnt jemanden" aria-label="Nachricht"></textarea>
+        <button class="primary" type="submit">Senden</button>
+      </div>
+    </form>
+  </section>
 </main>
 
 <dialog id="setDlg" class="sheet"></dialog>
@@ -247,6 +299,8 @@ dialog::backdrop{background:rgba(20,20,26,.55)}
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
+// Wird von deploy.ps1 gesetzt (gleicher Wert wie VERSION in sw.js)
+const APP_VERSION = "dev";
 /* ======== Timetable (Quelle: Instagram @hive_festival) ======== */
 // Die Timetable kommt aus timetable.json – für ein neues Event nur diese Datei austauschen.
 let EVENT = {}, STAGES = [], SETS = [], SET_BY_ID = {}, DAY_START = 15*60, SLOTS = 28;
@@ -330,8 +384,9 @@ function setOnline(v){ online=v; renderSync(); }
 async function load(){
   if(outbox.length) return flush();
   try{
-    const r = await fetch(`api.php?rev=${server.rev}`,{cache:"no-store",signal:timeout(8000)}); if(!r.ok) throw 0;
+    const r = await fetch(`api.php?rev=${server.rev}&chat=${chat.seq}&epoch=${encodeURIComponent(chat.epoch||"")}`,{cache:"no-store",signal:timeout(8000)}); if(!r.ok) throw 0;
     const s = await r.json();
+    if(s.chat) applyChat(s.chat);
     if(s.unchanged){ syncedAt=Date.now(); kvPut("state",{state:server,at:syncedAt}).catch(()=>{}); }
     else { await setServer(s); rebuild(); render(); }
     setOnline(true);
@@ -344,11 +399,12 @@ async function flush(){
     outbox = (await kvGet("outbox").catch(()=>null)) ?? outbox;   // evtl. hat der Service Worker schon gesendet
     if(!outbox.length){ rebuild(); flushing=false; return load(); }
     const sent = new Set(outbox.map(o=>o.id));
-    const r = await fetch("api.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"batch",ops:outbox}),signal:timeout(10000)});
+    const r = await fetch("api.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"batch",ops:outbox,chat:chat.seq,epoch:chat.epoch}),signal:timeout(10000)});
     if(!r.ok) throw 0;
     const j = await r.json();
     outbox = ((await kvGet("outbox").catch(()=>null)) ?? outbox).filter(o=>!sent.has(o.id));
     await kvPut("outbox",outbox).catch(()=>{});
+    if(j.chat) applyChat(j.chat);
     await setServer(j.state); rebuild(); render(); setOnline(true);
     if(j.skipped?.length) toast("Einige Änderungen konnten nicht übernommen werden.");
   }catch(e){ setOnline(false); }
@@ -356,7 +412,7 @@ async function flush(){
 }
 async function queueOp(op){
   op.id = Date.now().toString(36)+Math.random().toString(36).slice(2,7);
-  const key = o => `${o.action}|${o.user}|${o.set||""}`;
+  const key = o => o.action==="say" ? o.id : `${o.action}|${o.user}|${o.set||""}`;   // Nachrichten nie zusammenfassen
   outbox = outbox.filter(o=>key(o)!==key(op)); outbox.push(op);
   await kvPut("outbox",outbox).catch(()=>{});
   rebuild(); render(); renderSync();
@@ -371,6 +427,7 @@ async function api(body){   // Aktionen, die sofort Netz brauchen (Anlegen, Entf
   const j = await r.json().catch(()=>({error:"Antwort vom Server unlesbar."}));
   if(!r.ok||j.error) throw new Error(j.error||"Fehler beim Speichern.");
   setOnline(true);
+  if(j.chat) applyChat(j.chat);
   if(j.state){ await setServer(j.state); rebuild(); render(); }
   return j;
 }
@@ -393,7 +450,7 @@ function renderSync(){
     h("span",{class:"txt"}, online
       ? `Sende ${n} ${n===1?"Änderung":"Änderungen"} …`
       : [h("b",{},"Offline"), ` – Stand ${fmtAge(syncedAt)}`, n?`. ${n} ${n===1?"Änderung wartet":"Änderungen warten"} auf Netz.`:"."]),
-    online?null:h("button",{onclick:()=>{ b.querySelector(".txt").textContent="Verbinde …"; load(); }},"Erneut versuchen"));
+    ...(online?[]:[h("button",{onclick:()=>{ b.querySelector(".txt").textContent="Verbinde …"; load(); }},"Erneut versuchen")]));
 }
 
 /* ======== Erinnerungen (Web Push) ======== */
@@ -456,10 +513,10 @@ function renderNotify(){
     icon="🔕"; text="Benachrichtigungen sind für diese Seite blockiert. Erlaube sie in den Einstellungen des Browsers bzw. der App und tippe dann hier erneut.";
     btn=h("button",{class:"iconbtn",onclick:enablePush},"Erneut versuchen");
   } else if(pushSub){
-    text=`Erinnerungen sind an: ${pushMinutes} Min. vor jedem Act mit ✔, inklusive wer mitkommt.`;
+    text=`Erinnerungen sind an: ${pushMinutes} Min. vor jedem Act mit ✔ (inklusive wer mitkommt) und wenn dich jemand im Chat mit @ erwähnt.`;
     btn=h("button",{class:"iconbtn",onclick:disablePush},"Ausschalten");
   } else {
-    icon="🔕"; text=`Lass dich ${pushMinutes} Min. vor deinen Acts erinnern, auch wenn die App geschlossen ist.`;
+    icon="🔕"; text=`Lass dich ${pushMinutes} Min. vor deinen Acts erinnern und benachrichtigen, wenn dich jemand im Chat erwähnt – auch wenn die App geschlossen ist.`;
     btn=h("button",{class:"primary",onclick:enablePush},"Erinnerungen aktivieren");
   }
   box.className=`notify-card${pushSub?" on":""}`;
@@ -596,6 +653,7 @@ function renderCrew(){
     h("span",{class:"chips"},x.yes.slice(0,5).map(u=>chip(u)),x.yes.length>5?h("span",{class:"count"},`+${x.yes.length-5}`):null)))));
   const box=$("#crew"); box.replaceChildren();
   const ab=$("#adminBar"); ab.hidden=!adminKey;
+  if(adminKey) renderVersion();
   $("#adminDate").textContent = EVENT.date ? `Event-Datum: ${new Date(EVENT.date+"T12:00").toLocaleDateString("de-DE",{weekday:"short",day:"2-digit",month:"2-digit",year:"numeric"})}.` : "Event-Datum fehlt in timetable.json, automatische Erinnerungen sind aus.";
   for(const u of state.users){
     const p=Object.values(picksOf(u.id)), y=p.filter(v=>v==="yes").length, m=p.filter(v=>v==="maybe").length, c=conflictsOf(u.id).size;
@@ -609,6 +667,35 @@ function renderCrew(){
         adminKey?h("button",{class:"iconbtn","aria-label":`${u.name} entfernen`,onclick:()=>removeUser(u)},"Entfernen"):null)));
   }
 }
+/* ======== Versionsinfo (Admin) ======== */
+// "hive-20261007-2052-3047484" -> "07.10.2026, 20:52 (3047484)"
+const fmtVersion = v => { const m=/^hive-(\d{4})(\d\d)(\d\d)-(\d\d)(\d\d)-(\w+)$/.exec(v||""); return m?`${m[3]}.${m[2]}.${m[1]}, ${m[4]}:${m[5]} (${m[6]})`:(v||"unbekannt"); };
+let serverVersion = null, serverVersionAt = 0;
+async function checkServerVersion(){   // VERSION aus sw.js direkt vom Server lesen (sw.js geht nie über den App-Speicher)
+  if(Date.now()-serverVersionAt < 60000) return;
+  serverVersionAt = Date.now();
+  try{ const t=await (await fetch("sw.js",{cache:"no-store",signal:timeout(8000)})).text(); serverVersion=/const VERSION = "([^"]+)"/.exec(t)?.[1]||null; }
+  catch(e){ serverVersion=null; }
+  renderVersion();
+}
+function renderVersion(){
+  const box=$("#adminVersion"); checkServerVersion();
+  const outdated = serverVersion && APP_VERSION!=="dev" && serverVersion!==APP_VERSION;
+  box.replaceChildren(...[
+    h("span",{},"Version auf diesem Gerät: ",h("code",{title:APP_VERSION},APP_VERSION==="dev"?"Entwicklungsstand (nicht per Deploy)":fmtVersion(APP_VERSION))),
+    outdated?h("span",{class:"new"},`Auf dem Server: ${fmtVersion(serverVersion)}`):null,
+    outdated?h("button",{class:"iconbtn",onclick:updateApp},"Jetzt aktualisieren"):null,
+    !outdated&&serverVersion&&APP_VERSION!=="dev"?h("span",{},"✓ aktuell"):null].filter(Boolean));   // replaceChildren macht aus null den Text "null"
+}
+async function updateApp(){   // neuen Service Worker holen (legt die neuen Dateien in den Speicher), dann neu laden
+  toast("Aktualisiere …");
+  try{
+    const reg=await navigator.serviceWorker?.getRegistration(); await reg?.update();
+    const sw=reg?.installing||reg?.waiting;
+    if(sw) await new Promise(res=>{ sw.addEventListener("statechange",()=>{ if(sw.state==="activated") res(); }); setTimeout(res,8000); });
+  }catch(e){}
+  location.reload();
+}
 async function renameMe(){
   const u=userById(me); const n=(prompt("Neuer Name:",u?.name||"")||"").trim().replace(/\s+/g," ").slice(0,24); if(!n) return;
   queueOp({action:"rename",user:me,name:n}); toast(online?"Name geändert":"Name geändert – wird gesendet, sobald Netz da ist");
@@ -618,6 +705,99 @@ async function removeUser(u){
   try{ await api({action:"delete",user:u.id,key:adminKey}); toast(`${u.name} entfernt`); if(u.id===me){ me=null; localStorage.removeItem("hive-user"); render(); } }
   catch(e){ toast(e.message); if(/Admin/.test(e.message)){ adminKey=null; localStorage.removeItem("hive-admin"); render(); } }
 }
+
+/* ======== Chat ======== */
+// Server schickt nur Änderungen seit chat.seq; epoch wechselt, wenn data/chat.json neu angelegt wurde.
+let chat = {epoch:null, seq:0, msgs:[]};
+let chatStick = false;   // beim nächsten Zeichnen ans Ende scrollen
+function applyChat(d){
+  const changed = d.full || d.msgs.length || d.epoch!==chat.epoch;
+  let msgs = d.full ? [] : chat.msgs.slice();
+  for(const m of d.msgs){ const i=msgs.findIndex(x=>x.id===m.id); if(i>=0) msgs[i]=m; else msgs.push(m); }
+  chat = {epoch:d.epoch, seq:d.seq, msgs:msgs.filter(m=>!m.del).slice(-300)};
+  if(changed){ kvPut("chat",chat).catch(()=>{}); renderChat(); }
+}
+const chatVisible = () => view==="chat" && !document.hidden;
+function chatSeen(){ const [e,s]=(localStorage.getItem("hive-chat-seen")||"").split(":"); return e===chat.epoch ? Number(s)||0 : 0; }
+function renderChatBadge(){
+  if(chatVisible() && chat.epoch!=null) localStorage.setItem("hive-chat-seen",`${chat.epoch}:${chat.seq}`);
+  const seen=chatSeen(), unread=chat.msgs.filter(m=>m.seq>seen && m.user!==me), b=$("#chatBadge");
+  b.hidden=!unread.length; b.textContent=unread.length>99?"99+":unread.length;
+  b.classList.toggle("at",unread.some(m=>m.at?.includes(me)));
+}
+function richText(text){   // @Name hervorheben; längere Namen zuerst, wie auf dem Server
+  const names=state.users.map(u=>u.name).sort((a,b)=>b.length-a.length).map(n=>n.replace(/[.*+?^${}()|[\]\\]/g,"\\$&"));
+  if(!names.length) return [text];
+  const out=[]; let last=0;
+  for(const m of text.matchAll(new RegExp(`@(${names.join("|")})(?![\\p{L}\\p{N}])`,"giu"))){
+    const u=state.users.find(x=>x.name.toLowerCase()===m[1].toLowerCase());
+    out.push(text.slice(last,m.index),h("span",{class:`mention${u?.id===me?" me":""}`},m[0])); last=m.index+m[0].length;
+  }
+  out.push(text.slice(last)); return out;
+}
+const dayLabel = ts => { const d=new Date(ts*1000), t=new Date(); const y=new Date(t); y.setDate(t.getDate()-1);
+  return d.toDateString()===t.toDateString()?"Heute":d.toDateString()===y.toDateString()?"Gestern":d.toLocaleDateString("de-DE",{weekday:"short",day:"2-digit",month:"2-digit"}); };
+function renderChat(){
+  renderChatBadge();
+  if(view!=="chat") return;
+  $("#chatHint").replaceChildren("Alle aus der Crew lesen mit. Mit @Name erwähnst du jemanden – die Person bekommt dann eine Benachrichtigung, wenn sie unter „Mein Plan“ die Erinnerungen aktiviert hat.",
+    ...(pushReady&&!pushSub&&pushSupported?[" ",h("button",{class:"linkbtn",onclick:()=>go("plan")},"Für dich aktivieren")]:[]));
+  const box=$("#chatList"), root=document.documentElement;
+  const atEnd = chatStick || innerHeight+scrollY >= root.scrollHeight-150;
+  const now=Date.now()/1000;
+  const pending=outbox.filter(o=>o.action==="say" && !chat.msgs.some(m=>m.id===o.id)).map(o=>({id:o.id,user:o.user,text:o.text,ts:now,pending:true}));
+  const all=[...chat.msgs,...pending];
+  box.replaceChildren();
+  if(!all.length) box.append(h("p",{class:"hint"},"Noch keine Nachrichten. Schreib als Erstes, wo ihr euch trefft!"));
+  let prev=null;
+  for(const m of all){
+    const u=userById(m.user), mine=m.user===me, day=dayLabel(m.ts);
+    if(!prev || dayLabel(prev.ts)!==day) box.append(h("div",{class:"chat-day"},day));
+    const cont = prev && prev.user===m.user && dayLabel(prev.ts)===day && m.ts-prev.ts<300;
+    const name = u?.name || m.name || "Unbekannt";
+    box.append(h("div",{class:`msg${mine?" mine":""}${cont?" cont":""}${m.pending?" pending":""}${m.at?.includes(me)?" at-me":""}`,style:`--uc:${u?ucolor(u):"var(--steel)"}`},
+      mine?null:(u?chip(u):h("span",{class:"chip",style:"--uc:var(--steel)"},initials(name))),
+      h("div",{class:"bubble"},
+        !mine&&!cont?h("div",{class:"mname"},name):null,
+        h("div",{class:"text"},richText(m.text)),
+        h("div",{class:"meta"},
+          m.pending?"wird gesendet …":new Date(m.ts*1000).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"}),
+          !m.pending&&(mine||adminKey)?h("button",{class:"del",onclick:()=>unsay(m)},"Löschen"):null))));
+    prev=m;
+  }
+  if(atEnd){ chatStick=false; window.scrollTo({top:root.scrollHeight}); }
+}
+function sendChat(e){
+  e.preventDefault();
+  const inp=$("#chatInput"), text=inp.value.trim();
+  if(!text) return;
+  if(!userById(me)) return openJoin();
+  inp.value=""; chatAutosize(); $("#mentionPick").hidden=true; inp.focus();
+  chatStick=true;
+  queueOp({action:"say",user:me,text:text.slice(0,500)});
+}
+async function unsay(m){
+  if(!confirm("Nachricht löschen?")) return;
+  try{ await api({action:"unsay",id:m.id,user:me,key:adminKey||undefined,chat:chat.seq,epoch:chat.epoch}); toast("Nachricht gelöscht"); }
+  catch(e){ toast(e.message); }
+}
+function chatAutosize(){ const t=$("#chatInput"); t.style.height="auto"; t.style.height=Math.min(t.scrollHeight+4,140)+"px"; }
+function updateMentionPick(){   // nach "@" passende Namen zum Antippen anbieten
+  const inp=$("#chatInput"), box=$("#mentionPick");
+  const before=inp.value.slice(0,inp.selectionStart), m=before.match(/(?:^|\s)@([^@\n]{0,24})$/);
+  const list=m?state.users.filter(u=>u.id!==me&&u.name.toLowerCase().startsWith(m[1].toLowerCase())).slice(0,8):[];
+  box.hidden=!list.length; if(!list.length) return;
+  box.replaceChildren(...list.map(u=>h("button",{type:"button",onpointerdown:e=>e.preventDefault(),onclick:()=>{
+    const start=before.length-m[1].length, rest=inp.value.slice(inp.selectionStart);
+    inp.value=inp.value.slice(0,start)+u.name+" "+rest.replace(/^\S*\s?/,"");
+    const pos=start+u.name.length+1; inp.focus(); inp.setSelectionRange(pos,pos); box.hidden=true; chatAutosize();
+  }},chip(u),u.name)));
+}
+$("#composer").addEventListener("submit",sendChat);
+$("#chatInput").addEventListener("input",()=>{ chatAutosize(); updateMentionPick(); });
+$("#chatInput").addEventListener("keydown",e=>{   // Computer: Enter sendet, Umschalt+Enter = neue Zeile. Handy: Enter = neue Zeile
+  if(e.key==="Enter" && !e.shiftKey && !e.isComposing && !matchMedia("(pointer:coarse)").matches){ e.preventDefault(); $("#composer").requestSubmit(); }
+});
 
 /* ======== Anmeldung ======== */
 function openJoin(){
@@ -646,7 +826,9 @@ function go(v){
   view=v; document.querySelectorAll(".tabs button").forEach(b=>b.toggleAttribute("aria-current",false));
   document.querySelector(`.tabs button[data-view="${v}"]`).setAttribute("aria-current","page");
   document.querySelectorAll(".view").forEach(s=>s.hidden=s.id!==`view-${v}`);
-  history.replaceState(null,"",`#${v}`); render(); window.scrollTo({top:0});
+  history.replaceState(null,"",`#${v}`);
+  if(v==="chat") chatStick=true; else window.scrollTo({top:0});
+  render();
 }
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>go(b.dataset.view)));
 function render(){
@@ -655,6 +837,7 @@ function render(){
   mb.hidden=!u; if(u){ mb.replaceChildren(chip(u),u.name); }
   renderStageTabs(); renderGrid();
   if(view==="plan") renderPlan(); if(view==="crew") renderCrew();
+  renderChat();
   if($("#setDlg").open && openSetId) openSet(openSetId,true);
 }
 $("#meBtn").addEventListener("click",openJoin);
@@ -710,21 +893,24 @@ document.querySelectorAll("#adminBar [data-kind]").forEach(b=>b.addEventListener
 $("#adminOff").addEventListener("click",()=>{ adminKey=null; localStorage.removeItem("hive-admin"); toast("Admin-Modus beendet"); render(); });
 activateAdmin();
 document.body.dataset.stage = localStorage.getItem("hive-stage") || "tc";
-const start = location.hash.slice(1); if(["plan","crew"].includes(start)) go(start);
+const start = location.hash.slice(1); if(["plan","crew","chat"].includes(start)) go(start);
 /* ======== Start, Offline-Betrieb & Installation ======== */
 async function boot(){
   try{ initTimetable(await (await fetch("timetable.json",{cache:"no-cache"})).json()); }
   catch(e){ $("#grid").replaceChildren(h("p",{class:"hint",style:"padding:20px"},"Timetable konnte nicht geladen werden. Bitte einmal mit Internet öffnen.")); }
   try{ const c=await kvGet("state"); if(c?.state){ server=norm(c.state); syncedAt=c.at; } }catch(e){}
   try{ outbox=(await kvGet("outbox"))||[]; }catch(e){}
+  try{ const c=await kvGet("chat"); if(c?.msgs) chat=c; }catch(e){}
+  if(view==="chat") chatStick=true;
   rebuild(); render(); renderSync();
   initPush();
   load();
 }
 boot();
-setInterval(()=>{ if(!document.hidden) load(); },8000);
+let ticks=0;
+setInterval(()=>{ ticks++; if(!document.hidden && (view==="chat" || ticks%3===0)) load(); },3000);   // im Chat alle 3 s, sonst alle 9 s
 setInterval(()=>{ if(!online) renderSync(); },30000);
-document.addEventListener("visibilitychange",()=>{ if(!document.hidden) load(); });
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ renderChat(); load(); } });
 window.addEventListener("online",()=>load());
 window.addEventListener("offline",()=>setOnline(false));
 
@@ -737,7 +923,7 @@ if("serviceWorker" in navigator){
     if(e.data?.type==="goto"){ go(e.data.view||"plan"); return; }
     if(e.data?.type!=="synced") return;
     try{ const c=await kvGet("state"); if(c?.state){ server=norm(c.state); syncedAt=c.at; } outbox=(await kvGet("outbox"))||[]; }catch(err){}
-    rebuild(); render(); setOnline(true);
+    rebuild(); render(); setOnline(true); load();   // gesendete Chat-Nachrichten abholen
   });
 }
 navigator.storage?.persist?.().catch(()=>{});

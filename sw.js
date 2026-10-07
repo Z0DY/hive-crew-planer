@@ -1,7 +1,7 @@
 // HIVE Crew-Planer – Service Worker
 // Bei App-Updates VERSION erhöhen, damit alle Geräte die neuen Dateien laden.
 const VERSION = "hive-v4";
-const SHELL = ["./", "index.html", "timetable.json", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
+const SHELL = ["./", "index.html", "timetable.json", "manifest.webmanifest", "app-icons/icon-192.png", "app-icons/icon-512.png", "app-icons/apple-touch-icon.png"];
 const FONT_CACHE = "hive-fonts";
 
 self.addEventListener("install", e => {
@@ -17,6 +17,7 @@ self.addEventListener("fetch", e => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== "GET") return;
   if (url.pathname.endsWith("/api.php")) return;                       // Daten verwaltet die Seite selbst
+  if (url.pathname.endsWith("/sw.js")) return;                         // Versionsabfrage im Admin-Modus: immer vom Server
   if (url.host === "fonts.googleapis.com" || url.host === "fonts.gstatic.com") {
     e.respondWith(caches.open(FONT_CACHE).then(async c => {             // Schriften: einmal laden, dann aus dem Speicher
       const hit = await c.match(req); if (hit) return hit;
@@ -78,7 +79,7 @@ self.addEventListener("push", e => {
   try { d = e.data ? e.data.json() : {}; } catch { d = { body: e.data ? e.data.text() : "" }; }
   e.waitUntil(self.registration.showNotification(d.title || "HIVE Crew-Planer", {
     body: d.body || "", tag: d.tag || undefined, renotify: !!d.tag,
-    icon: "icons/icon-192.png", vibrate: [200, 100, 200],
+    icon: "app-icons/icon-192.png", vibrate: [200, 100, 200],
     data: { url: d.url || "./#plan" }
   }));
 });

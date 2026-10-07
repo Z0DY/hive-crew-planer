@@ -1,13 +1,13 @@
 # HIVE Indoor – Crew-Planer
 
 ## Dateien
-- `index.html` – die komplette App (Timetable, Mein Plan, Crew)
-- `api.php` – speichert Personen und Auswahl
+- `index.html` – die komplette App (Timetable, Mein Plan, Crew, Chat)
+- `api.php` – speichert Personen, Auswahl und Chat-Nachrichten
 - `config.php` – dein Admin-Schlüssel (bei Updates nicht überschreiben)
-- `sw.js`, `manifest.webmanifest`, `icons/` – machen die Seite zur installierbaren, offline-fähigen App
+- `sw.js`, `manifest.webmanifest`, `app-icons/` – machen die Seite zur installierbaren, offline-fähigen App (nicht `icons/` nennen: den Pfad belegt Apache standardmäßig für eigene Symbole)
 - `timetable.json` – Event, Datum und Timetable (für neue Events nur diese Datei anpassen)
 - `push_lib.php`, `cron.php` – Erinnerungen per Push-Nachricht
-- `data/` – hier legt die App automatisch `state.json` an
+- `data/` – hier legt die App automatisch `state.json`, `chat.json` und `push.json` an
 - `data/.htaccess` – sperrt den direkten Abruf der Daten (Apache)
 
 ## Installation
@@ -39,7 +39,7 @@ oder in VS Code `Strg+Umschalt+B` („Deploy: Test“) bzw. „Terminal > Task a
 
 Das Skript
 - lässt `data/` und eine vorhandene `config.php` auf dem Server unangetastet (als root: `data/` gehört danach `www-data`),
-- setzt `VERSION` in `sw.js` automatisch (z. B. `hive-20261006-2215-0f0f2f4`),
+- setzt `VERSION` in `sw.js` und `APP_VERSION` in `index.html` automatisch (z. B. `hive-20261006-2215-0f0f2f4`, im Admin-Modus unter „Crew“ sichtbar),
 - prüft am Ende, ob die neue Version online ist.
 
 Voraussetzung: Login per SSH-Schlüssel (sonst fragt es zweimal nach dem Passwort). Gelöschte Dateien werden auf dem Server nicht automatisch entfernt.
@@ -62,14 +62,22 @@ Die Geräte laden die neue Version beim nächsten Öffnen mit Netz im Hintergrun
 - Einstellungen in `config.php`: `notify_minutes`, `notify_maybe`, `contact`.
 - Die Schlüssel für Push liegen in `data/push.json` und werden beim ersten Aufruf automatisch erzeugt. Diese Datei nicht löschen, sonst müssen alle die Erinnerungen neu aktivieren.
 
+## Crew-Chat
+- Ein gemeinsamer Chat für alle unter „Chat“. Die Zahl am Tab zeigt ungelesene Nachrichten (gelb = du wurdest erwähnt).
+- `@Name` erwähnt jemanden. Wer unter „Mein Plan“ die Erinnerungen aktiviert hat, bekommt dann eine Push-Nachricht. Andere Chat-Nachrichten lösen keine Push-Nachricht aus.
+- Ohne Netz geschriebene Nachrichten werden gesendet, sobald wieder Verbindung da ist.
+- Eigene Nachrichten kann jeder löschen, im Admin-Modus alle.
+- Gespeichert werden die letzten 300 Nachrichten in `data/chat.json`. Chat leeren: diese Datei löschen.
+
 ## Neues Event
-Nur `timetable.json` anpassen (Name, Ort, Datum, Stages, Zeiten), in `sw.js` die `VERSION` hochzählen und für einen frischen Start `data/state.json` löschen. Die Erinnerungs-Anmeldungen in `data/push.json` bleiben dabei erhalten.
+Nur `timetable.json` anpassen (Name, Ort, Datum, Stages, Zeiten), in `sw.js` die `VERSION` hochzählen und für einen frischen Start `data/state.json` und `data/chat.json` löschen. Die Erinnerungs-Anmeldungen in `data/push.json` bleiben dabei erhalten.
 
 ## Admin-Zugang (Personen entfernen)
 1. In `config.php` das Wort `HIER-GEHEIMES-WORT-EINTRAGEN` durch ein eigenes geheimes Wort ersetzen (mind. 8 Zeichen, Buchstaben, Zahlen, -).
 2. 5x schnell auf das HIVE-Logo tippen und das Wort eingeben – oder einmal `https://deine-domain/?admin=DEIN-WORT` öffnen. Das Gerät merkt sich den Admin-Modus. Falsche Eingaben werden vom Server um 1 Sekunde gebremst.
 3. Unter „Crew“ erscheinen jetzt die Buttons „Entfernen“. Alle anderen sehen sie nicht und der Server lehnt Löschungen ohne Schlüssel ab.
 4. „Admin-Modus beenden“ entfernt den Schlüssel wieder vom Gerät.
+5. Die Admin-Leiste zeigt außerdem, welche Version auf dem Gerät läuft und ob auf dem Server schon eine neuere liegt („Jetzt aktualisieren“ lädt sie sofort).
 
 ## Daten zurücksetzen / sichern
 - Sichern: `data/state.json` kopieren.
@@ -78,4 +86,4 @@ Nur `timetable.json` anpassen (Name, Ort, Datum, Stages, Zeiten), in `sw.js` die
 ## Hinweise
 - Wer den Link kennt, kann alles sehen und Einträge bearbeiten. Personen entfernen kann nur der Admin.
 - Jedes Gerät merkt sich, wer man ist. Auf einem neuen Gerät einfach den eigenen Namen antippen.
-- Die Seite aktualisiert sich alle 8 Sekunden automatisch.
+- Die Seite aktualisiert sich alle 9 Sekunden automatisch, bei offenem Chat alle 3 Sekunden.
