@@ -4,7 +4,8 @@
 #          .\deploy.ps1 prod -Yes  ohne Rückfrage
 #
 # Test:      lädt den aktuellen Stand hoch, inkl. noch nicht committeter Änderungen an bekannten Dateien.
-# Produktiv: nur committete Stände, mit Rückfrage; danach wird der Stand als prod-<Datum> getaggt.
+# Produktiv: nur committete und auf GitHub gepushte Stände, mit Rückfrage;
+#            danach wird der Stand als prod-<Datum> getaggt und der Tag auf GitHub übertragen.
 # Immer:
 # - config.php wird nur beim allerersten Deploy hochgeladen, danach nie überschrieben.
 # - data/ (state.json, push.json) bleibt unangetastet.
@@ -39,6 +40,18 @@ $stamp = Get-Date -Format "yyyyMMdd-HHmm"
 $version = "hive-$stamp-$hash"
 if ($dirty) { Write-Warning "Nicht committete Änderungen werden mit hochgeladen." }
 if ($untracked) { Write-Warning ("Neue, noch nicht hinzugefügte Dateien werden NICHT hochgeladen:`n  " + ($untracked -join "`n  ")) }
+
+# Produktiv: nur Stände, die schon auf GitHub liegen – sonst ist live etwas, das im Repo fehlt
+if ($prod) {
+  $ErrorActionPreference = "Continue"   # Git-Meldungen auf stderr sollen hier nicht abbrechen
+  & $git -C $PSScriptRoot fetch --quiet origin 2>&1 | Out-Null
+  $fetchFailed = [bool]$LASTEXITCODE
+  if (-not $fetchFailed) { & $git -C $PSScriptRoot merge-base --is-ancestor HEAD '@{u}' 2>&1 | Out-Null }
+  $notPushed = -not $fetchFailed -and [bool]$LASTEXITCODE
+  $ErrorActionPreference = "Stop"
+  if ($fetchFailed) { Write-Warning "GitHub nicht erreichbar – kann nicht prüfen, ob der Stand gepusht ist." }
+  if ($notPushed) { throw "Der Stand ist noch nicht auf GitHub. Erst 'git push', dann erneut veröffentlichen." }
+}
 
 if ($prod -and -not $Yes) {
   Write-Host "PRODUKTIV: $(Git log -1 --format='%h %s' HEAD)" -ForegroundColor Yellow
@@ -78,6 +91,10 @@ if ($prod) {
   $tag = "prod-$stamp"
   Git tag -a $tag -m "Produktiv veröffentlicht: $version" $rev
   Write-Host "Getaggt als $tag" -ForegroundColor Cyan
+  $ErrorActionPreference = "Continue"
+  & $git -C $PSScriptRoot push --quiet origin $tag 2>&1 | Out-Null
+  $ErrorActionPreference = "Stop"
+  if ($LASTEXITCODE) { Write-Warning "Tag $tag nicht auf GitHub übertragen – später mit 'git push origin $tag' nachholen." }
 }
 
 # Prüfen, ob die neue Version ausgeliefert wird
