@@ -170,6 +170,22 @@ function chat_push_message($m) {
   return ['title' => '💬 ' . $m['name'] . ' im Crew-Chat', 'body' => $text, 'tag' => 'chat', 'url' => './#chat'];
 }
 
+// ---------- Lageplan (Karte) ----------
+// Der Admin lädt ihn als JPEG hoch. Jede Version bekommt eine neue Kennung v, die Datei heißt danach -> lange cachen.
+// Positionen: $state['pos'][uid] = [x, y, Zeit] mit x/y als Anteil von Bildbreite/-höhe (0–1).
+const MAP_MAX = 4000000;   // Byte, entspricht ca. 5,3 MB base64
+const POS_MAX_AGE = 3 * 3600;   // ältere Positionen aus der Offline-Warteschlange verwerfen
+function map_path($v) { return __DIR__ . '/data/map-' . $v . '.jpg'; }
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['map'])) {
+  $v = preg_replace('/[^a-z0-9]/', '', (string)$_GET['map']);
+  if ($v === '' || !is_file(map_path($v))) { http_response_code(404); exit; }
+  header('Content-Type: image/jpeg');
+  header('Cache-Control: public, max-age=31536000, immutable');
+  header('X-Content-Type-Options: nosniff');
+  header('Content-Length: ' . filesize(map_path($v)));
+  readfile(map_path($v)); exit;
+}
+
 // Foto ausliefern (ohne den Plan-Speicher zu sperren). Name = Nachrichten-ID, ändert sich nie -> lange cachen.
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['photo'])) {
   $pid = preg_replace('/[^a-z0-9]/', '', (string)$_GET['photo']);
@@ -251,7 +267,30 @@ function apply_op(&$state, $in) {
     case 'delete':
       if (!is_admin($in['key'] ?? '')) throw new ApiError('Nur der Admin kann Personen entfernen.', 403);
       $state['users'] = array_values(array_filter($state['users'], fn($u) => $u['id'] !== $uid));
-      unset($state['picks'][$uid]);
+      unset($state['picks'][$uid], $state['pos'][$uid]);
+      return ['ok' => true];
+    case 'pos':   // eigener Standort auf dem Lageplan; ohne x/y = ausblenden
+      if (!user_exists($state, $uid)) throw new ApiError('Person nicht gefunden.', 404);
+      if (!isset($in['x'], $in['y'])) { unset($state['pos'][$uid]); return ['ok' => true]; }
+      $x = (float)$in['x']; $y = (float)$in['y'];
+      if (empty($state['map']) || $x < 0 || $x > 1 || $y < 0 || $y > 1) throw new ApiError('Position außerhalb des Lageplans.');
+      // Zeitpunkt des Antippens: aus der Offline-Warteschlange kommt die Position evtl. erst viel später an
+      $now = time(); $t = min((int)($in['t'] ?? $now), $now);
+      if ($t < $now - POS_MAX_AGE || ($state['pos'][$uid][2] ?? 0) > $t) return ['ok' => true];   // zu alt oder schon eine neuere da
+      $state['pos'][$uid] = [round($x, 4), round($y, 4), $t];
+      return ['ok' => true];
+    case 'map':   // Lageplan hochladen oder entfernen (Admin). Alte Positionen passen dann nicht mehr und werden gelöscht.
+      if (!is_admin($in['key'] ?? '')) throw new ApiError('Nur der Admin kann den Lageplan ändern.', 403);
+      $old = $state['map']['v'] ?? null;
+      unset($state['map'], $state['pos']);
+      if (!empty($in['photo'])) {
+        $img = photo_decode($in['photo'], MAP_MAX);
+        if (!$img) throw new ApiError('Bild ungültig oder zu groß.');
+        $v = bin2hex(random_bytes(4));
+        if (@file_put_contents(map_path($v), $img[0]) === false) throw new Exception('data/ nicht beschreibbar');
+        $state['map'] = ['v' => $v, 'w' => $img[1], 'h' => $img[2]];
+      }
+      if ($old) @unlink(map_path($old));
       return ['ok' => true];
     case 'pick':
       $set = preg_replace('/[^a-z0-9-]/', '', (string)($in['set'] ?? ''));
@@ -325,12 +364,12 @@ try {
     try { $result = push_action($state, $pd, $in); }
     finally { $state['notify'] = push_users($pd); push_close($pfp, $pd); }
   } elseif ($action === 'batch') {
-    // Sammel-Update aus der Offline-Warteschlange: nur pick/rename/say, fehlerhafte Einträge werden übersprungen
+    // Sammel-Update aus der Offline-Warteschlange: nur pick/rename/pos/say, fehlerhafte Einträge werden übersprungen
     $done = []; $skipped = []; $changed = false;
     foreach (array_slice((array)($in['ops'] ?? []), 0, 500) as $op) {
       $oid = substr(preg_replace('/[^a-zA-Z0-9-]/', '', (string)($op['id'] ?? '')), 0, 40);
       $act = $op['action'] ?? '';
-      if (!in_array($act, ['pick', 'rename', 'say'], true)) { $skipped[] = $oid; continue; }
+      if (!in_array($act, ['pick', 'rename', 'pos', 'say'], true)) { $skipped[] = $oid; continue; }
       try {
         if ($act === 'say') {
           $openChat();

@@ -50,6 +50,12 @@ Voraussetzung: Login per SSH-Schlüssel (sonst fragt es zweimal nach dem Passwor
 
 Die Geräte laden die neue Version beim nächsten Öffnen mit Netz im Hintergrund und zeigen sie beim übernächsten Start.
 
+## Karte (Lageplan)
+- Im Admin-Modus unter „Karte“ den Lageplan als Bild hochladen (PDF vorher als Screenshot speichern). Erst danach sehen alle den Reiter „Karte“.
+- Jeder tippt auf den Plan, wo er gerade ist. Die anderen sehen den farbigen Punkt. Er verblasst nach 30 Min. und verschwindet nach 2 Std.
+- Ohne Netz landet der Standort in der Warteschlange. Der Plan selbst wird beim ersten Öffnen mit Netz auf dem Handy gespeichert.
+- Wer den Plan ersetzt oder entfernt, löscht damit alle gesetzten Standorte. Die Datei liegt als `data/map-<Kennung>.jpg`.
+
 ## Erinnerungen (Push-Nachrichten)
 1. In `timetable.json` bei `"date"` den ersten Event-Tag eintragen, z. B. `"date": "2026-11-14"` (mit Anführungszeichen). Ohne Datum werden keine Erinnerungen verschickt.
 2. Cronjob einrichten, der jede Minute prüft, welche Acts bald beginnen:

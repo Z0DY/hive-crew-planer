@@ -3,20 +3,32 @@
 const VERSION = "hive-v4";
 const SHELL = ["./", "index.html", "timetable.json", "manifest.webmanifest", "app-icons/icon-192.png", "app-icons/icon-512.png", "app-icons/apple-touch-icon.png"];
 const FONT_CACHE = "hive-fonts";
+const MAP_CACHE = "hive-map";   // Lageplan, bleibt bei App-Updates erhalten
 
 self.addEventListener("install", e => {
   // Einzeln cachen: eine fehlende Datei darf die Installation nicht verhindern
   e.waitUntil(caches.open(VERSION).then(c => Promise.allSettled(SHELL.map(f => c.add(f)))).then(() => self.skipWaiting()));
 });
 self.addEventListener("activate", e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION && k !== FONT_CACHE).map(k => caches.delete(k))))
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== VERSION && k !== FONT_CACHE && k !== MAP_CACHE).map(k => caches.delete(k))))
     .then(() => self.clients.claim()));
 });
 
 self.addEventListener("fetch", e => {
   const req = e.request, url = new URL(req.url);
   if (req.method !== "GET") return;
-  if (url.pathname.endsWith("/api.php")) return;                       // Daten verwaltet die Seite selbst
+  if (url.pathname.endsWith("/api.php") && url.searchParams.has("map")) {   // Lageplan: einmal laden, dann auch offline
+    e.respondWith(caches.open(MAP_CACHE).then(async c => {
+      const hit = await c.match(req); if (hit) return hit;
+      try {
+        const res = await fetch(req);
+        if (res.ok) { for (const k of await c.keys()) await c.delete(k); await c.put(req, res.clone()); }   // nur die aktuelle Version behalten
+        return res;
+      } catch { return new Response("", { status: 504 }); }
+    }));
+    return;
+  }
+  if (url.pathname.endsWith("/api.php")) return;                      // Daten verwaltet die Seite selbst
   if (url.pathname.endsWith("/sw.js")) return;                         // Versionsabfrage im Admin-Modus: immer vom Server
   if (url.host === "fonts.googleapis.com" || url.host === "fonts.gstatic.com") {
     e.respondWith(caches.open(FONT_CACHE).then(async c => {             // Schriften: einmal laden, dann aus dem Speicher

@@ -174,6 +174,28 @@ a.iconbtn{display:inline-block;text-decoration:none;color:inherit}
 .top .artist{font-family:var(--display);font-size:19px;line-height:1.1}
 .top .meta{font-family:var(--cond);font-weight:600;color:var(--steel);font-size:15px}
 
+/* ---------- Karte (Lageplan) ---------- */
+.map{position:relative;overflow:hidden;height:min(68vh,680px);height:min(68dvh,680px);min-height:280px;background:var(--paper);border-radius:6px;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:crosshair}
+.map-inner{position:absolute;left:0;top:0;transform-origin:0 0}
+.map-inner img{display:block;width:100%;height:100%;pointer-events:none;-webkit-user-drag:none}
+.pins{position:absolute;inset:0;pointer-events:none}
+.pin{position:absolute;transform:translate(-50%,-50%) scale(var(--iz,1))}
+.pin .chip{box-shadow:0 1px 5px rgba(0,0,0,.5)}
+.pin.me{z-index:2}
+.pin.me .chip{box-shadow:0 0 0 3px #fff,0 0 0 5px #23232A}
+.pin.old{opacity:.45}
+.pin.flash .chip{animation:pulse .5s ease-in-out 3}
+.map-zoom{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:6px}
+.map-zoom button{width:42px;height:42px;border:0;border-radius:10px;background:rgba(35,35,42,.85);color:#fff;font-size:22px;font-weight:700;line-height:1;padding:0}
+.map-me{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:10px 0 0;font-weight:600}
+.map-list{list-style:none;margin:12px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px}
+.map-list button{width:100%;display:flex;align-items:center;gap:10px;background:var(--paper);border:0;border-radius:6px;padding:6px 10px;text-align:left;font-weight:600}
+.map-list .age{margin-left:auto;font-family:var(--cond);font-weight:600;color:var(--steel);white-space:nowrap}
+.map-list .old{opacity:.6}
+label.iconbtn{position:relative;display:inline-block;cursor:pointer}
+label.iconbtn:focus-within{border-color:var(--ink)}
+@media(max-width:420px){.tabs button{font-size:15px;padding:10px 2px}}
+
 /* ---------- Chat ---------- */
 .tabs .badge{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 5px;margin-left:4px;border-radius:999px;background:#fff;color:#23232A;font-size:13px;line-height:1;vertical-align:2px}
 .tabs .badge.at{background:#F2B705}
@@ -304,6 +326,7 @@ dialog::backdrop{background:rgba(20,20,26,.55)}
 <nav class="tabs" aria-label="Ansicht">
   <button data-view="timetable" aria-current="page">Timetable</button>
   <button data-view="plan">Mein Plan</button>
+  <button data-view="map" hidden>Karte</button>
   <button data-view="crew">Crew</button>
   <button data-view="chat">Chat<span class="badge" id="chatBadge" hidden></span></button>
 </nav>
@@ -321,6 +344,29 @@ dialog::backdrop{background:rgba(20,20,26,.55)}
     <p class="hint" id="planHint"></p>
     <div id="notifyCard"></div>
     <div id="plan"></div>
+  </section>
+
+  <section class="view" id="view-map" hidden>
+    <h2>Wo ist die Crew?</h2>
+    <p class="hint" id="mapHint"></p>
+    <div class="adminbar" id="mapAdmin" hidden>
+      <div id="mapAdminText"></div>
+      <div class="admin-actions">
+        <label class="iconbtn"><span id="mapUpLabel">Lageplan hochladen</span><input type="file" id="mapInput" accept="image/*" class="sr"></label>
+        <button class="iconbtn" id="mapRemove">Lageplan entfernen</button>
+      </div>
+    </div>
+    <div class="map" id="map" hidden>
+      <div class="map-inner" id="mapInner"><img id="mapImg" alt="Lageplan" draggable="false"><div class="pins" id="mapPins"></div></div>
+      <div class="map-zoom">
+        <button type="button" data-zoom="in" aria-label="Hineinzoomen">+</button>
+        <button type="button" data-zoom="out" aria-label="Herauszoomen">−</button>
+        <button type="button" data-zoom="all" aria-label="Ganzen Plan zeigen">⤢</button>
+      </div>
+    </div>
+    <div class="map-me" id="mapMe"></div>
+    <ul class="map-list" id="mapList"></ul>
+    <p class="hint" id="mapMissing" style="margin-top:10px"></p>
   </section>
 
   <section class="view" id="view-crew" hidden>
@@ -428,7 +474,7 @@ function splitPlan(a,b){
 }
 
 /* ======== Zustand ======== */
-let state = {rev:-1, users:[], picks:{}};
+let state = {rev:-1, users:[], picks:{}, pos:{}};
 let me = localStorage.getItem("hive-user") || null;
 let adminKey = localStorage.getItem("hive-admin") || null;
 let view = "timetable";
@@ -469,11 +515,11 @@ const idb = () => new Promise((res,rej)=>{ const r=indexedDB.open("hive",1); r.o
 async function kvGet(k){ const db=await idb(); return new Promise((res,rej)=>{ const q=db.transaction("kv").objectStore("kv").get(k); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); }
 async function kvPut(k,v){ const db=await idb(); return new Promise((res,rej)=>{ const tx=db.transaction("kv","readwrite"); tx.objectStore("kv").put(v,k); tx.oncomplete=()=>res(); tx.onerror=()=>rej(tx.error); }); }
 
-let server = {rev:-1, users:[], picks:{}};   // letzter bekannter Stand vom Server
+let server = {rev:-1, users:[], picks:{}, pos:{}};   // letzter bekannter Stand vom Server
 let outbox = [];                               // eigene Änderungen, die noch nicht beim Server angekommen sind
 let syncedAt = null;                           // Zeitpunkt des letzten erfolgreichen Abgleichs
 let online = navigator.onLine;
-const norm = s => { if(!s.picks||Array.isArray(s.picks)) s.picks={}; return s; };
+const norm = s => { if(!s.picks||Array.isArray(s.picks)) s.picks={}; if(!s.pos||Array.isArray(s.pos)) s.pos={}; return s; };
 const timeout = ms => { const c=new AbortController(); setTimeout(()=>c.abort(),ms); return c.signal; };
 
 function rebuild(){   // Anzeige = Server-Stand + eigene offene Änderungen
@@ -481,6 +527,7 @@ function rebuild(){   // Anzeige = Server-Stand + eigene offene Änderungen
   for(const op of outbox){
     if(op.action==="pick"){ const p=s.picks[op.user]=s.picks[op.user]||{}; if(op.status==="yes"||op.status==="maybe") p[op.set]=op.status; else delete p[op.set]; }
     if(op.action==="rename"){ const u=s.users.find(x=>x.id===op.user); if(u) u.name=op.name; }
+    if(op.action==="pos"){ if(op.x!=null) s.pos[op.user]=[op.x,op.y,op.t]; else delete s.pos[op.user]; }
   }
   state = s;
 }
@@ -531,9 +578,9 @@ async function queueOp(op){
   // Android/Chrome: Browser sendet die Warteschlange auch bei geschlossener App, sobald wieder Netz da ist
   if(navigator.serviceWorker?.controller) navigator.serviceWorker.ready.then(r=>r.sync?.register("outbox")).catch(()=>{});
 }
-async function api(body){   // Aktionen, die sofort Netz brauchen (Anlegen, Entfernen, Admin)
+async function api(body,ms=10000){   // Aktionen, die sofort Netz brauchen (Anlegen, Entfernen, Admin)
   let r;
-  try{ r = await fetch("api.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:timeout(10000)}); }
+  try{ r = await fetch("api.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body),signal:timeout(ms)}); }
   catch(e){ setOnline(false); throw new Error("Dafür brauchst du gerade Netz. Versuch es gleich nochmal."); }
   const j = await r.json().catch(()=>({error:"Antwort vom Server unlesbar."}));
   if(!r.ok||j.error) throw new Error(j.error||"Fehler beim Speichern.");
@@ -862,6 +909,133 @@ async function removeUser(u){
   catch(e){ toast(e.message); if(/Admin/.test(e.message)){ adminKey=null; localStorage.removeItem("hive-admin"); render(); } }
 }
 
+/* ======== Karte (Lageplan) ======== */
+// Der Admin lädt den Lageplan hoch, jeder tippt darauf, wo er gerade ist. Positionen als Anteil von Bildbreite/-höhe (0–1),
+// damit sie bei jeder Bildschirmgröße und Zoomstufe passen. Zoomen: zwei Finger, Mausrad oder die Knöpfe.
+const POS_FADE = 30, POS_HIDE = 120;   // Minuten: danach blasser bzw. ausgeblendet
+let mapShown = null;                   // Version des geladenen Plans
+let mapView = {z:1, x:0, y:0};         // Zoom und Verschiebung (px)
+let mapBase = null;                    // Plan in Grundgröße (ganz sichtbar) und Größe des Rahmens
+let mapFlash = null;                   // Person, deren Punkt gerade kurz pulsiert
+const mapUrl = m => `api.php?map=${m.v}`;
+const fmtAgo = sec => { const m=Math.max(0,Math.floor(sec/60)); return m<1?"gerade eben":m<60?`vor ${m} Min.`:`vor ${Math.floor(m/60)} Std.${m%60?` ${m%60} Min.`:""}`; };
+const posAge = p => Date.now()/1000-p[2];   // Sekunden
+function renderMap(){
+  const m=state.map, tab=$('.tabs button[data-view="map"]');
+  tab.hidden=!m&&!adminKey;
+  if((m?.v??null)!==mapShown){   // neuer Plan: Bild auch im Hintergrund laden, damit er offline da ist
+    mapShown=m?.v??null; mapView={z:1,x:0,y:0};
+    if(m) $("#mapImg").src=mapUrl(m); else $("#mapImg").removeAttribute("src");
+  }
+  if(view!=="map") return;
+  if(tab.hidden){ if(state.rev>=0) go("timetable"); return; }
+  $("#mapAdmin").hidden=!adminKey;
+  $("#mapAdminText").replaceChildren(h("b",{},"Admin: "),m?`Lageplan mit ${m.w} × ${m.h} Pixeln. Beim Ersetzen werden alle Standorte gelöscht.`
+    :"Noch kein Lageplan. Bis du einen hochlädst, sehen die anderen den Reiter „Karte“ nicht. Ein PDF vorher als Bild (Screenshot) speichern.");
+  $("#mapUpLabel").textContent=m?"Lageplan ersetzen":"Lageplan hochladen";
+  $("#mapRemove").hidden=!m;
+  $("#mapHint").textContent=m?`Tippe auf den Plan, wo du gerade bist – die Crew sieht dich dann dort. Mit zwei Fingern zoomen. Standorte verblassen nach ${POS_FADE} Min. und verschwinden nach ${POS_HIDE/60} Std.`:"";
+  $("#map").hidden=!m;
+  const list=m?state.users.map(u=>({u,p:state.pos[u.id]})).filter(x=>x.p&&posAge(x.p)<POS_HIDE*60).sort((a,b)=>b.p[2]-a.p[2]):[];
+  if(!m){ $("#mapMe").replaceChildren(); $("#mapList").replaceChildren(); $("#mapMissing").textContent=""; return; }
+  mapLayout();
+  $("#mapPins").replaceChildren(...list.slice().reverse().map(({u,p})=>   // ältere zuerst, neueste oben drauf
+    h("span",{class:`pin${u.id===me?" me":""}${posAge(p)>POS_FADE*60?" old":""}${u.id===mapFlash?" flash":""}`,style:`left:${p[0]*100}%;top:${p[1]*100}%`},chip(u,false,true))));
+  const mine=list.find(x=>x.u.id===me);
+  $("#mapMe").replaceChildren(...(mine?[`Dein Standort: ${fmtAgo(posAge(mine.p))}${posAge(mine.p)>POS_FADE*60?" – noch dort? Tippe neu auf den Plan.":""}`,
+    h("button",{class:"iconbtn",onclick:hideMyPos},"Ausblenden")]:[]));
+  $("#mapList").replaceChildren(...list.map(({u,p})=>h("li",{},h("button",{class:posAge(p)>POS_FADE*60?"old":"",onclick:()=>mapFocus(u.id)},
+    chip(u),u.name+(u.id===me?" (du)":""),h("span",{class:"age"},fmtAgo(posAge(p)))))));
+  const missing=state.users.filter(u=>!list.some(x=>x.u.id===u.id));
+  $("#mapMissing").textContent=missing.length?`Ohne Standort: ${missing.map(u=>u.name).join(", ")}`:"";
+}
+function mapLayout(){   // Grundgröße: ganzer Plan passt in den Rahmen
+  const m=state.map, box=$("#map"); if(!m||box.hidden||!box.clientWidth) return;
+  const cw=box.clientWidth, ch=box.clientHeight, f=Math.min(cw/m.w,ch/m.h);
+  mapBase={w:m.w*f, h:m.h*f, cw, ch, zmax:Math.max(4,2/f)};   // bis doppelte Originalauflösung
+  $("#mapInner").style.width=mapBase.w+"px"; $("#mapInner").style.height=mapBase.h+"px";
+  mapApply();
+}
+function mapApply(){
+  const b=mapBase, v=mapView; if(!b) return;
+  v.z=Math.min(Math.max(v.z,1),b.zmax);
+  const fit=(pos,size,box)=>size<=box?(box-size)/2:Math.min(0,Math.max(box-size,pos));   // kleiner als der Rahmen: mittig, sonst kein leerer Rand
+  v.x=fit(v.x,b.w*v.z,b.cw); v.y=fit(v.y,b.h*v.z,b.ch);
+  const inner=$("#mapInner");
+  inner.style.transform=`translate(${v.x}px,${v.y}px) scale(${v.z})`;
+  inner.style.setProperty("--iz",1/v.z);   // Punkte bleiben beim Zoomen gleich groß
+}
+function mapZoomAt(f,cx,cy,dx=0,dy=0){   // um den Punkt (cx,cy) zoomen und um (dx,dy) verschieben, Bildschirmkoordinaten
+  const b=mapBase, v=mapView; if(!b) return;
+  const r=$("#map").getBoundingClientRect(), px=cx-r.left, py=cy-r.top;
+  const z=Math.min(Math.max(v.z*f,1),b.zmax); f=z/v.z;
+  v.x=px-(px-v.x)*f+dx; v.y=py-(py-v.y)*f+dy; v.z=z; mapApply();
+}
+function mapFocus(uid){
+  const b=mapBase, p=state.pos[uid]; if(!b||!p) return;
+  mapView.z=Math.max(mapView.z,Math.min(3,b.zmax));
+  mapView.x=b.cw/2-p[0]*b.w*mapView.z; mapView.y=b.ch/2-p[1]*b.h*mapView.z; mapApply();
+  $("#map").scrollIntoView({behavior:"smooth",block:"center"});
+  mapFlash=uid; renderMap(); setTimeout(()=>{ if(mapFlash===uid){ mapFlash=null; renderMap(); } },1600);
+}
+function setMyPos(cx,cy){
+  if(!userById(me)) return openJoin();
+  const r=$("#mapImg").getBoundingClientRect(), x=(cx-r.left)/r.width, y=(cy-r.top)/r.height;
+  if(!(x>=0&&x<=1&&y>=0&&y<=1)) return;
+  navigator.vibrate?.(20);
+  queueOp({action:"pos",user:me,x:+x.toFixed(4),y:+y.toFixed(4),t:Math.floor(Date.now()/1000)});
+  toast(online?"Dein Standort ist gesetzt":"Standort gesetzt – wird gesendet, sobald Netz da ist");
+}
+function hideMyPos(){ queueOp({action:"pos",user:me}); toast("Dein Standort ist ausgeblendet"); }
+async function uploadMap(file){
+  if(!file) return;
+  if(!file.type.startsWith("image/")) return toast("Bitte ein Bild wählen – ein PDF vorher als Screenshot speichern.");
+  if(state.map && !confirm("Lageplan ersetzen? Alle gesetzten Standorte werden dabei gelöscht.")) return;
+  try{
+    toast("Lageplan wird hochgeladen …");
+    const img=await loadImage(file);
+    let j=toJpeg(img,3000,.82); if(j.data.length>5e6) j=toJpeg(img,2400,.72); if(j.data.length>5e6) j=toJpeg(img,2000,.65);   // Server nimmt max. ca. 5,3 MB
+    await api({action:"map",key:adminKey,photo:j.data},90000);
+    toast("Lageplan hochgeladen");
+  }catch(e){ toast(e.message||"Lageplan konnte nicht geladen werden."); }
+}
+$("#mapInput").addEventListener("change",e=>{ uploadMap(e.target.files[0]); e.target.value=""; });
+$("#mapRemove").addEventListener("click",async()=>{
+  if(!confirm("Lageplan entfernen? Alle gesetzten Standorte werden dabei gelöscht.")) return;
+  try{ await api({action:"map",key:adminKey}); toast("Lageplan entfernt"); }catch(e){ toast(e.message); }
+});
+document.querySelectorAll("#map [data-zoom]").forEach(b=>b.addEventListener("click",()=>{
+  const r=$("#map").getBoundingClientRect(), z=b.dataset.zoom;
+  if(z==="all"){ mapView={z:1,x:0,y:0}; mapApply(); } else mapZoomAt(z==="in"?1.6:1/1.6,r.left+r.width/2,r.top+r.height/2);
+}));
+// Ein Finger: verschieben, zwei Finger: zoomen, kurz antippen ohne Bewegung: eigenen Standort setzen
+const mapPtrs=new Map(); let mapTap=null;
+const mapMid=a=>a.length>1?{x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2,d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)}:{x:a[0].x,y:a[0].y,d:0};
+$("#map").addEventListener("pointerdown",e=>{
+  if(e.target.closest("button")||(e.pointerType==="mouse"&&e.button!==0)) return;
+  $("#map").setPointerCapture(e.pointerId);
+  mapPtrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  mapTap=mapPtrs.size===1?{x:e.clientX,y:e.clientY,t:Date.now()}:null;   // zweiter Finger = Zoomen, kein Antippen
+});
+$("#map").addEventListener("pointermove",e=>{
+  if(!mapPtrs.has(e.pointerId)) return;
+  const A=mapMid([...mapPtrs.values()].slice(0,2));
+  mapPtrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  const B=mapMid([...mapPtrs.values()].slice(0,2));
+  if(mapTap && Math.hypot(e.clientX-mapTap.x,e.clientY-mapTap.y)>10) mapTap=null;
+  if(mapTap) return;   // leichtes Zittern beim Antippen verschiebt nichts
+  mapZoomAt(A.d&&B.d?B.d/A.d:1,A.x,A.y,B.x-A.x,B.y-A.y);
+});
+const mapUp=e=>{
+  if(!mapPtrs.delete(e.pointerId)) return;
+  if(e.type==="pointerup" && !mapPtrs.size && mapTap && Date.now()-mapTap.t<600) setMyPos(e.clientX,e.clientY);
+  mapTap=null;
+};
+["pointerup","pointercancel"].forEach(t=>$("#map").addEventListener(t,mapUp));
+$("#map").addEventListener("wheel",e=>{ e.preventDefault(); mapZoomAt(Math.exp(-e.deltaY*.002),e.clientX,e.clientY); },{passive:false});
+$("#map").addEventListener("contextmenu",e=>e.preventDefault());
+window.addEventListener("resize",()=>{ if(view==="map") mapLayout(); });
+
 /* ======== Chat ======== */
 // Server schickt nur Änderungen seit chat.seq; epoch wechselt, wenn data/chat.json neu angelegt wurde.
 let chat = {epoch:null, seq:0, msgs:[]};
@@ -951,7 +1125,8 @@ async function loadImage(file){
 function toJpeg(img,max,q){
   const s=Math.min(1,max/Math.max(img.width,img.height)), c=document.createElement("canvas");
   c.width=Math.round(img.width*s); c.height=Math.round(img.height*s);
-  c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+  const g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height);   // durchsichtige PNGs sonst schwarz
+  g.drawImage(img,0,0,c.width,c.height);
   return {data:c.toDataURL("image/jpeg",q).split(",")[1], w:c.width, h:c.height};
 }
 async function pickPhoto(file){
@@ -1071,7 +1246,7 @@ function render(){
   mb.hidden=!u; if(u){ mb.replaceChildren(chip(u),u.name); }
   renderStageTabs(); renderGrid(); renderNow();
   if(view==="plan") renderPlan(); if(view==="crew") renderCrew();
-  renderChat();
+  renderMap(); renderChat();
   if($("#setDlg").open && openSetId) openSet(openSetId,true);
 }
 $("#meBtn").addEventListener("click",openJoin);
@@ -1127,7 +1302,7 @@ document.querySelectorAll("#adminBar [data-kind]").forEach(b=>b.addEventListener
 $("#adminOff").addEventListener("click",()=>{ adminKey=null; localStorage.removeItem("hive-admin"); toast("Admin-Modus beendet"); render(); });
 activateAdmin();
 document.body.dataset.stage = localStorage.getItem("hive-stage") || "tc";
-const start = location.hash.slice(1); if(["plan","crew","chat"].includes(start)) go(start);
+const start = location.hash.slice(1); if(["plan","map","crew","chat"].includes(start)) go(start);
 /* ======== Start, Offline-Betrieb & Installation ======== */
 async function boot(){
   try{ initTimetable(await (await fetch("timetable.json",{cache:"no-cache"})).json()); }
@@ -1147,6 +1322,7 @@ setInterval(()=>{ ticks++; if(!document.hidden && (view==="chat" || ticks%3===0)
 setInterval(()=>{ if(!online) renderSync(); },30000);
 let lastNow = null;   // Zeitlinie und Jetzt-Übersicht jede Minute nachziehen
 setInterval(()=>{ const n=nowMin(); if(n!==lastNow){ lastNow=n; if(view==="timetable"&&!document.hidden){ renderGrid(); renderNow(); } } },15000);
+setInterval(()=>{ if(view==="map"&&!document.hidden) renderMap(); },30000);   // Alter der Standorte nachziehen
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ renderChat(); load(); } });
 window.addEventListener("online",()=>load());
 window.addEventListener("offline",()=>setOnline(false));
