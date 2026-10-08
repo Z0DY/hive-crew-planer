@@ -1,3 +1,6 @@
 # Laufzeitdaten der App (vom Server erzeugt)
 data/*
 !data/.htaccess
+
+# Persönliche Claude-Code-Einstellungen
+.claude/settings.local.json
