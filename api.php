@@ -48,6 +48,27 @@ function chat_delta($c, $since, $epoch) {
   $msgs = array_filter($c['msgs'], fn($m) => $full ? empty($m['del']) : $m['seq'] > $since);
   return ['epoch' => $c['epoch'], 'seq' => $c['seq'], 'full' => $full, 'msgs' => array_values($msgs)];
 }
+// ---------- Zuletzt online (eigene Datei data/seen.json, nur für den Admin abrufbar) ----------
+// Jeder Abgleich eines geöffneten Geräts zählt. Höchstens einmal pro Minute schreiben, sonst bei jedem Abruf eine Dateisperre.
+const SEEN_EVERY = 60;
+function seen_path() { return __DIR__ . '/data/seen.json'; }
+function seen_read() {
+  $s = null;
+  if ($fp = @fopen(seen_path(), 'r')) { flock($fp, LOCK_SH); $s = json_decode(stream_get_contents($fp), true); flock($fp, LOCK_UN); fclose($fp); }
+  return is_array($s) ? $s : [];
+}
+function seen_write($fn) {   // $fn ändert das Array und gibt true zurück, wenn gespeichert werden soll
+  if (!$fp = @fopen(seen_path(), 'c+')) return;
+  flock($fp, LOCK_EX);
+  $s = json_decode(stream_get_contents($fp), true); if (!is_array($s)) $s = [];
+  if ($fn($s)) { ftruncate($fp, 0); rewind($fp); fwrite($fp, json_encode($s ?: new stdClass())); fflush($fp); }
+  flock($fp, LOCK_UN); fclose($fp);
+}
+function seen_touch($state, $uid) {
+  $uid = preg_replace('/[^a-z0-9]/', '', (string)$uid);
+  if ($uid === '' || !user_exists($state, $uid) || time() - (seen_read()[$uid] ?? 0) < SEEN_EVERY) return;
+  seen_write(function (&$s) use ($uid) { $s[$uid] = time(); return true; });
+}
 // ---------- Kalender-Export (.ics) für "Mein Plan" ----------
 // Acts mit ✔ bekommen einen Wecker (notify_minutes vorher) – der klingelt auch ohne Empfang. "Vielleicht" ohne Wecker.
 function ics_text($s) { return str_replace(['\\', ';', ',', "\n"], ['\\\\', '\\;', '\\,', '\\n'], (string)$s); }
@@ -233,7 +254,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     header('Content-Disposition: attachment; filename="hive-plan.ics"');
     echo $ics; exit;
   }
-  $out = isset($_GET['rev']) && (int)$_GET['rev'] === (int)$state['rev'] ? ['unchanged' => true, 'rev' => $state['rev']] : $state + ['serverTime' => time()];
+  if (isset($_GET['me'])) seen_touch($state, $_GET['me']);
+  $out =isset($_GET['rev']) && (int)$_GET['rev'] === (int)$state['rev'] ? ['unchanged' => true, 'rev' => $state['rev']] : $state + ['serverTime' => time()];
   if (isset($_GET['chat'])) $out['chat'] = chat_delta(chat_read(), (int)$_GET['chat'], (string)($_GET['epoch'] ?? ''));
   echo json_encode($out, JSON_UNESCAPED_UNICODE); exit;
 }
@@ -359,6 +381,10 @@ try {
   } elseif ($action === 'checkadmin') {
     if (!is_admin($in['key'] ?? '')) throw new ApiError('Admin-Schlüssel ungültig.', 403);
     $result = ['ok' => true]; $changed = false;
+  } elseif ($action === 'seen') {   // "Zuletzt online" aller Personen (nur Admin)
+    if (!is_admin($in['key'] ?? '')) throw new ApiError('Admin-Schlüssel ungültig.', 403);
+    $ids = array_column($state['users'], 'id');
+    $result = ['seen' => (object)array_intersect_key(seen_read(), array_flip($ids)), 'now' => time()]; $changed = false;
   } elseif ($action === 'subscribe' || $action === 'unsubscribe' || $action === 'testpush') {
     [$pfp, $pd] = push_open();
     try { $result = push_action($state, $pd, $in); }
@@ -387,6 +413,7 @@ try {
     [$pfp, $pd] = push_open();
     $pd['subs'] = array_values(array_filter($pd['subs'], fn($s) => $s['user'] !== $uidDel));
     $state['notify'] = push_users($pd); push_close($pfp, $pd);
+    seen_write(function (&$s) use ($uidDel) { if (!isset($s[$uidDel])) return false; unset($s[$uidDel]); return true; });
   }
 } catch (ApiError $e) {
   if ($cfp) { flock($cfp, LOCK_UN); fclose($cfp); }

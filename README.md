@@ -7,7 +7,7 @@
 - `sw.js`, `manifest.webmanifest`, `app-icons/` – machen die Seite zur installierbaren, offline-fähigen App (nicht `icons/` nennen: den Pfad belegt Apache standardmäßig für eigene Symbole)
 - `timetable.json` – Event, Datum und Timetable (für neue Events nur diese Datei anpassen)
 - `push_lib.php`, `cron.php` – Erinnerungen per Push-Nachricht
-- `data/` – hier legt die App automatisch `state.json`, `chat.json` und `push.json` an
+- `data/` – hier legt die App automatisch `state.json`, `chat.json`, `push.json` und `seen.json` an
 - `data/.htaccess` – sperrt den direkten Abruf der Daten (Apache)
 
 ## Installation
@@ -92,6 +92,7 @@ Nur `timetable.json` anpassen (Name, Ort, Datum, Stages, Zeiten), in `sw.js` die
 3. Unter „Crew“ erscheinen jetzt die Buttons „Entfernen“. Alle anderen sehen sie nicht und der Server lehnt Löschungen ohne Schlüssel ab.
 4. „Admin-Modus beenden“ entfernt den Schlüssel wieder vom Gerät.
 5. Die Admin-Leiste zeigt außerdem, welche Version auf dem Gerät läuft und ob auf dem Server schon eine neuere liegt („Jetzt aktualisieren“ lädt sie sofort).
+6. **Zuletzt online:** Im Admin-Modus steht unter „Crew“ bei jeder Person, wann sie die App zuletzt offen hatte („Online“ = in den letzten 2 Minuten). Gezählt wird jeder Abgleich einer geöffneten App mit Netz, auf die Minute genau. Die Zeiten liegen in `data/seen.json` und sind nur mit Admin-Schlüssel abrufbar. „unbekannt“ heißt: seit Einführung der Funktion noch nicht gesehen.
 
 ## Daten zurücksetzen / sichern
 - Sichern: `data/state.json` kopieren.

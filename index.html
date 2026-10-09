@@ -165,6 +165,8 @@ a.iconbtn{display:inline-block;text-decoration:none;color:inherit}
 .person .name{font-weight:700;font-size:18px}
 .person .stats{font-family:var(--cond);font-weight:600;color:var(--steel)}
 .person .stats .bad{color:var(--red)}
+.person .seen{font-family:var(--cond);font-weight:600;color:var(--steel);font-size:14px}
+.person .seen.on::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#22A04B;margin-right:5px;vertical-align:1px}
 .person.self{box-shadow:inset 0 0 0 2px var(--ink)}
 .iconbtn{border:2px solid var(--line);background:none;border-radius:8px;padding:6px 10px;font-size:14px;font-weight:600}
 .iconbtn:hover{border-color:var(--ink)}
@@ -537,7 +539,7 @@ function setOnline(v){ online=v; renderSync(); }
 async function load(){
   if(outbox.length) return flush();
   try{
-    const r = await fetch(`api.php?rev=${server.rev}&chat=${chat.seq}&epoch=${encodeURIComponent(chat.epoch||"")}`,{cache:"no-store",signal:timeout(8000)}); if(!r.ok) throw 0;
+    const r = await fetch(`api.php?rev=${server.rev}${me?`&me=${encodeURIComponent(me)}`:""}&chat=${chat.seq}&epoch=${encodeURIComponent(chat.epoch||"")}`,{cache:"no-store",signal:timeout(8000)}); if(!r.ok) throw 0;
     const s = await r.json();
     if(s.chat) applyChat(s.chat);
     if(s.unchanged){ syncedAt=Date.now(); kvPut("state",{state:server,at:syncedAt}).catch(()=>{}); }
@@ -864,11 +866,35 @@ function renderCrew(){
     box.append(h("div",{class:`person${self?" self":""}`},chip(u,false,true),
       h("div",{},h("div",{class:"name"},u.name+(self?" (du)":"")),
         h("div",{class:"stats"},`${y} dabei, ${m} vielleicht`,c?h("span",{class:"bad"},`, ${c} Überschneidungen`):null,
-          (state.notify||[]).includes(u.id)?h("span",{title:"Erinnerungen aktiviert"}," 🔔"):null)),
+          (state.notify||[]).includes(u.id)?h("span",{title:"Erinnerungen aktiviert"}," 🔔"):null),
+        adminKey&&seen?seenLine(u.id):null),
       h("div",{class:"actions"},
         self?h("button",{class:"iconbtn",onclick:renameMe},"Umbenennen"):null,
         adminKey?h("button",{class:"iconbtn","aria-label":`${u.name} entfernen`,onclick:()=>removeUser(u)},"Entfernen"):null)));
   }
+  if(adminKey) loadSeen();
+}
+/* ======== Zuletzt online (Admin) ======== */
+// Der Server merkt sich pro Person den letzten Abgleich eines geöffneten Geräts (höchstens minütlich genau).
+// Nur der Admin kann das abrufen; es steckt bewusst nicht im normalen Plan-Stand.
+const SEEN_ONLINE = 2;   // Minuten: so lange gilt jemand als "online" (Abgleich alle 3–9 s, gespeichert jede Minute)
+let seen = null, seenAt = 0;   // {seen:{uid:Unix-Sek.}, now:Server-Zeit} und wann abgerufen
+async function loadSeen(force){
+  if(!adminKey||!online||(!force&&Date.now()-seenAt<30000)) return;
+  seenAt=Date.now();
+  try{
+    const r=await fetch("api.php",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"seen",key:adminKey}),signal:timeout(8000)});
+    const j=await r.json(); if(!r.ok||j.error) return;
+    seen={...j,at:Date.now()}; if(view==="crew") renderCrew();
+  }catch(e){}
+}
+function seenLine(uid){
+  const t=seen.seen[uid];
+  if(!t) return h("div",{class:"seen"},"Zuletzt online: unbekannt");
+  const sec=seen.now-t+(Date.now()-seen.at)/1000;   // Server-Uhr, falls die Handy-Uhr falsch geht
+  if(sec<SEEN_ONLINE*60) return h("div",{class:"seen on"},"Online");
+  const d=new Date(Date.now()-sec*1000);
+  return h("div",{class:"seen",title:d.toLocaleString("de-DE")},"Zuletzt online: "+(sec<86400?fmtAgo(sec):d.toLocaleString("de-DE",{weekday:"short",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"})));
 }
 /* ======== Versionsinfo (Admin) ======== */
 // "hive-20261007-2052-3047484" -> "07.10.2026, 20:52 (3047484)"
@@ -1323,6 +1349,7 @@ setInterval(()=>{ if(!online) renderSync(); },30000);
 let lastNow = null;   // Zeitlinie und Jetzt-Übersicht jede Minute nachziehen
 setInterval(()=>{ const n=nowMin(); if(n!==lastNow){ lastNow=n; if(view==="timetable"&&!document.hidden){ renderGrid(); renderNow(); } } },15000);
 setInterval(()=>{ if(view==="map"&&!document.hidden) renderMap(); },30000);   // Alter der Standorte nachziehen
+setInterval(()=>{ if(view==="crew"&&adminKey&&!document.hidden) loadSeen(true); },30000);   // "Zuletzt online" aktuell halten
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ renderChat(); load(); } });
 window.addEventListener("online",()=>load());
 window.addEventListener("offline",()=>setOnline(false));
